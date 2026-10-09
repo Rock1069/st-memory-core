@@ -1,0 +1,13 @@
+{
+  "display_name": "记忆中枢 · P0",
+  "loading_order": 200,
+  "requires": [],
+  "optional": [],
+  "dependencies": [],
+  "js": "index.js",
+  "css": "styles.css",
+  "author": "ST-cpyoss",
+  "version": "0.1.0",
+  "auto_update": false,
+  "hooks": { "enable": "onEnable", "disable": "onDisable", "delete": "onDelete" }
+}

@@ -1,0 +1,2557 @@
+{
+  "schemaVersion": 1,
+  "title": "新酒馆记忆管理插件功能覆盖清单",
+  "inventoryVersion": "0.2",
+  "date": "2026-10-09",
+  "architecture": "fresh_core_with_modular_feature_parity",
+  "scope": "主表为最终范围；阶段仅表示顺序；未接入和退役代码单独审查。",
+  "sources": [
+    {
+      "code": "H",
+      "repo": "https://github.com/SenriYuki/SillyTavern-Horae",
+      "version": "1.15.1",
+      "commit": "7a8859897bbfc6f0781ac5eb2451bc607e2bab95"
+    },
+    {
+      "code": "D",
+      "repo": "https://github.com/AlbusKen/shujuku",
+      "version": "1.2.9",
+      "commit": "53fbc20813d9d309a9454bc9db9e031e5e2e86d2"
+    },
+    {
+      "code": "B",
+      "repo": "https://github.com/Rock1069/ST-BaiBai-Book",
+      "version": "1.2.23",
+      "commit": "ae548e0b225b8adc3843ce5c575d7681801fc918"
+    }
+  ],
+  "phases": {
+    "P0": "统一底座",
+    "P1": "记忆管理闭环",
+    "P2": "检索与提示词预算",
+    "P3": "表格、RPG、世界书",
+    "P4": "剧情、Agent、续写与推演",
+    "P5": "完整迁移与扩展兼容"
+  },
+  "statusValues": [
+    "not_started",
+    "designed",
+    "in_progress",
+    "pending_acceptance",
+    "passed"
+  ],
+  "verification": {
+    "basis": "static_source_review_and_p0_automated_tests",
+    "runtimeIntegrationTested": false,
+    "featureAcceptanceCompleted": false,
+    "p0": {
+      "pluginVersion": "0.1.0",
+      "automatedTestsPassed": 46,
+      "checkedAt": "2026-10-09T13:14:08.561Z",
+      "realSillyTavernTested": false,
+      "evidence": "artifacts/p0-validation.json"
+    }
+  },
+  "modules": [
+    {
+      "id": "01",
+      "title": "统一底座与酒馆生命周期"
+    },
+    {
+      "id": "02",
+      "title": "摘要、压缩与时间线管理"
+    },
+    {
+      "id": "03",
+      "title": "故事时间与历法"
+    },
+    {
+      "id": "04",
+      "title": "人物、关系、认知与偏好"
+    },
+    {
+      "id": "05",
+      "title": "物品、约定与悬念"
+    },
+    {
+      "id": "06",
+      "title": "场景、地图与天气"
+    },
+    {
+      "id": "07",
+      "title": "RPG 系统"
+    },
+    {
+      "id": "08",
+      "title": "表格、SQL 与 JSON 变量"
+    },
+    {
+      "id": "09",
+      "title": "记忆检索与召回模式"
+    },
+    {
+      "id": "10",
+      "title": "提示词组装与上下文预算"
+    },
+    {
+      "id": "11",
+      "title": "API 渠道与运行配置"
+    },
+    {
+      "id": "12",
+      "title": "世界书与外部材料"
+    },
+    {
+      "id": "13",
+      "title": "剧情规划与正文优化"
+    },
+    {
+      "id": "14",
+      "title": "Agent 与世界书控制"
+    },
+    {
+      "id": "15",
+      "title": "智能续写"
+    },
+    {
+      "id": "16",
+      "title": "世界推演"
+    },
+    {
+      "id": "17",
+      "title": "管理界面、主题与辅助工具"
+    },
+    {
+      "id": "18",
+      "title": "迁移、备份与带记忆新对话"
+    },
+    {
+      "id": "19",
+      "title": "诊断、维护与性能"
+    },
+    {
+      "id": "20",
+      "title": "公开接口与第三方兼容"
+    }
+  ],
+  "evidenceIndex": [
+    {
+      "code": "D01",
+      "references": "[ ] 自定义表、列、行、说明和更新规则 | H1/D1 | P3 | 表结构可配置，字段身份不依赖显示位置"
+    },
+    {
+      "code": "D02",
+      "references": "[ ] 全局/角色模板与聊天独立实例 | H1/D1/B7 | P3 | 共用模板不造成角色或聊天数据污染"
+    },
+    {
+      "code": "D03",
+      "references": "[ ] 表格 CRUD、坐标显示、撤销与重做 | H1/D5 | P3 | 操作经统一提交，视图与事实同步"
+    },
+    {
+      "code": "D04",
+      "references": "[ ] 行、列、单元格锁定 | H1/D5 | P3 | AI、SQL 和外部 API 都遵守同一锁策略"
+    },
+    {
+      "code": "D05",
+      "references": "[ ] 自动填表频率、上下文深度、批次与跳过规则 | D2 | P3 | 每张表可独立配置并查看更新前沿"
+    },
+    {
+      "code": "D06",
+      "references": "[ ] 手工重填、历史回放与一键追平 | D2 | P3 | 重填与补后缀分开；中断不会留下半次提交"
+    },
+    {
+      "code": "D07",
+      "references": "[ ] 更新组、表依赖与冲突校验 | D1/D2 | P3 | 并发组冲突有明确拒绝或重试结果"
+    },
+    {
+      "code": "D08",
+      "references": "[ ] 模板/指导信息的导入导出与切换 | H1/D1 | P3 | 列改名、隐藏和映射冲突不会误绑定数据"
+    },
+    {
+      "code": "D09",
+      "references": "[ ] SQL 表结构、SQLite 查询与事务修改 | D1/D5 | P3 | DDL 可校验；无效批次不部分修改事实"
+    },
+    {
+      "code": "D10",
+      "references": "[ ] JSON 视图、SQL 视图与稳定表/列/行 ID | D1/D5/N | P3 | 两种访问形式读取同一版本，无双写事实源"
+    },
+    {
+      "code": "D11",
+      "references": "[ ] 原生 table_edit/table_sql 工具填表 | D2/D3 | P3 | 支持渠道可调用；不支持时有明确处理策略"
+    },
+    {
+      "code": "D12",
+      "references": "[ ] JSON 变量树、路径操作与分层模板 | B1/B7 | P3 | 全局/角色/聊天模板不混淆，路径操作可撤回"
+    },
+    {
+      "code": "H1",
+      "references": "`horae/index.js`（DEFAULT_SETTINGS、公开 API、消息/生成事件、表格/RPG/界面/导入导出）；`horae/manifest.json`"
+    },
+    {
+      "code": "H2",
+      "references": "`horae/core/horaeManager.js`（解析、聚合、事件、人物、物品、关系、RPG）"
+    },
+    {
+      "code": "H3",
+      "references": "`horae/core/vectorManager.js`、`horae/utils/embeddingWorker.js`、CHANGELOG 的向量快照章节"
+    },
+    {
+      "code": "H4",
+      "references": "`horae/utils/timeUtils.js` 与 `index.js` 的 customCalendar 配置"
+    },
+    {
+      "code": "H5",
+      "references": "`horae/Horae端口系统说明.md` 与 `_publishHoraeApi()`"
+    },
+    {
+      "code": "H6",
+      "references": "`horae/README.zh-CN.md`（语言/能力）；`horae/core/i18n.js`"
+    },
+    {
+      "code": "H7",
+      "references": "`horae/THEME.md`、`index.js` 的主题编辑与 CSS 控件"
+    },
+    {
+      "code": "B1",
+      "references": "`baibai/src/memory/types.ts`、`store.ts`、`apply.ts`；`src/index.ts`"
+    },
+    {
+      "code": "B2",
+      "references": "`baibai/src/memory/engine.ts`、`inject.ts`、`select.ts`；`src/api/settings.ts`"
+    },
+    {
+      "code": "B3",
+      "references": "`baibai/src/memory/vector/recall.ts`、`embed.ts`、`store.ts`、`index.ts`、`scope.ts`、`debug.ts`"
+    },
+    {
+      "code": "B4",
+      "references": "`baibai/src/memory/knowledge.ts`、`lifeDetails.ts`、`npcRelations.ts`、`timeRel.ts`、`timeTag.ts`；`src/pages/npcs/index.vue`"
+    },
+    {
+      "code": "B5",
+      "references": "`baibai/src/plot/model.ts`、`store.ts`、`presets.ts`、`realism.ts`、`demStabs.ts`"
+    },
+    {
+      "code": "B6",
+      "references": "`baibai/src/weather/model.ts`、`store.ts`"
+    },
+    {
+      "code": "B7",
+      "references": "`baibai/src/api/settings.ts`、`client.ts`"
+    },
+    {
+      "code": "B8",
+      "references": "`baibai/PUBLIC_API.md`、`src/public/types.ts`、`query.ts`、`register.ts`"
+    },
+    {
+      "code": "B9",
+      "references": "`baibai/src/memory/migrate.ts`、`carryover.ts`；README 的旧总结/带数据新对话说明"
+    },
+    {
+      "code": "B10",
+      "references": "`baibai/src/pages/registry.ts`、`App.vue`、`menu.ts`、`topbar.ts`、`quickReply.ts`、`floorPanel.ts`、`state/ui.ts`"
+    },
+    {
+      "code": "D1",
+      "references": "`shujuku/src/entry-extension.ts`、`data/models/chat-message-data.ts`、`shared/models/table-data.ts`；`service/table/storage-frame-v2-types.ts`、`table-write-transaction.ts`、`table-schema-migration.ts`"
+    },
+    {
+      "code": "D2",
+      "references": "`shujuku/src/service/table/update-scheduler.ts`、`update-orchestrator.ts`、`table-update-commit.ts`；`presentation-v2/copy/form-fill-copy.ts`；`presentation/bootstrap/init.ts`"
+    },
+    {
+      "code": "D3",
+      "references": "`shujuku/src/presentation-v2/copy/fill-mode-copy.ts`；`service/vector/summary-vector-hybrid-retrieval.ts`、`summary-vector-index-types.ts`；`data/gateways/vector-embedding-gateway.ts`"
+    },
+    {
+      "code": "D4",
+      "references": "`shujuku/src/service/worldbook/injection-engine.ts` 及其 entries/custom 子模块；`service/worldbook/pipeline.ts`"
+    },
+    {
+      "code": "D5",
+      "references": "`shujuku/src/presentation/bootstrap/api-registry.ts` 与 `api-groups/table-crud-api.ts`、`table-lock-api.ts`、`sql-api.ts`、`core-data-api.ts`"
+    },
+    {
+      "code": "D6",
+      "references": "`shujuku/src/service/agent/` 的决策、Skill、接管及恢复模块；`presentation/bootstrap/api-groups/agent-worldbook-api.ts`"
+    },
+    {
+      "code": "D7",
+      "references": "`shujuku/src/service/continuation/model.ts`、`continuation-orchestrator.ts`、`host-generation-bridge.ts`、`stage-execution-engine.ts`"
+    },
+    {
+      "code": "D8",
+      "references": "`shujuku/src/service/simulation/model.ts`、`simulation-orchestrator.ts`、`world-dynamics.ts`、`simulation-projection.ts`、`simulation-transaction.ts`"
+    },
+    {
+      "code": "D9",
+      "references": "`shujuku/src/presentation-v2/copy/import-copy.ts`、`pages/ImportPage.vue`；`presentation/triggers/import-process.ts`"
+    },
+    {
+      "code": "D10",
+      "references": "`shujuku/src/presentation-v2/copy/content-replace-copy.ts`、`pages/ContentReplacePage.vue`；`service/optimization/content-optimization.ts`"
+    },
+    {
+      "code": "D11",
+      "references": "`shujuku/src/presentation-v2/router/page-registry.ts` 与 `copy/dashboard-copy.ts`、`api-copy.ts`、`advanced-tools-copy.ts`、`developer-copy.ts`；`presentation/bootstrap/api-groups/feature-runtime-api.ts`"
+    },
+    {
+      "code": "D12",
+      "references": "`shujuku/src/presentation-v2/copy/data-mgmt-copy.ts`、`presentation/triggers/update-trigger.ts`（退役声明）"
+    }
+  ],
+  "features": [
+    {
+      "id": "F01",
+      "name": "单一原生扩展入口、宿主就绪检测",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "安装后正常启动；重复初始化不重复绑定事件",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F02",
+      "name": "单聊、群聊、角色、聊天与分支作用域",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H2",
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "同名角色及不同群聊不串数据",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/runtime.test.js",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F03",
+      "name": "稳定消息与实体 ID、别名、来源定位",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "删楼导致序号变化后仍定位原实体与依据",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/runtime.test.js",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F04",
+      "name": "唯一事实存储与统一版本协议",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H2",
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "模块不能各自维护相互矛盾的同一事实",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F05",
+      "name": "事件增量、检查点、状态重放",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "重启、历史查询与实时状态重放结果一致",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F06",
+      "name": "原子提交、幂等与重复事件去重",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "同一剧情变化只扣一次物品、不重复添加记录",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。单实例提交与宿主内存版本校验；宿主没有服务端 CAS，不承诺跨设备并发隔离。"
+    },
+    {
+      "id": "F07",
+      "name": "编辑、删除、重生成、swipe 生命周期",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D1",
+        "B2",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "摘要、状态和检索视图跟随当前有效版本",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。已实现来源失效与状态重放；摘要/检索实际视图在 P1/P2 接入后验收。"
+    },
+    {
+      "id": "F08",
+      "name": "任务队列、并发预算、依赖调度",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D2",
+        "B2",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "重复点击不重复执行；任务顺序与进度可查",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/scheduler.test.js",
+        "tests/gateway.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F09",
+      "name": "取消、超时、重试、迟到结果拒绝",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "D2",
+        "B2",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "切聊天或取消后旧任务不能提交到新聊天",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/scheduler.test.js",
+        "tests/runtime.test.js",
+        "tests/gateway.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。主 API 取消仅停止等待并拒绝迟到响应；独立渠道支持 AbortSignal。"
+    },
+    {
+      "id": "F10",
+      "name": "正文、quiet、续写、代写等生成类型隔离",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D2",
+        "B2",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "内部调用不递归触发摘要、召回和自动推演",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "F11",
+      "name": "人工更正、锁定与模型写入优先级",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D1",
+        "B1",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "模型无法静默覆盖已锁定的人工作业",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。人工事务与字段锁协议已测试；事实编辑 UI 在 P1 接入。"
+    },
+    {
+      "id": "F12",
+      "name": "模块开关、能力声明、配置版本迁移",
+      "moduleId": "01",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B7",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "关闭模块不执行其任务；配置升级可回退",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/settings.test.js",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。只开放 core；本插件 v0 配置升级保留恢复副本；旧插件迁移属于 P5。"
+    },
+    {
+      "id": "M01",
+      "name": "自动楼层摘要与正文状态提取",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B2",
+        "D2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "每个有效楼层有覆盖记录；未摘缺口可见",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M02",
+      "name": "手动补摘、范围扫描、历史批量分析",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B2",
+        "D2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "范围可选、结果可审阅，中断可继续",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M03",
+      "name": "详细/精简摘要与提取字段开关",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B7"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "可按需求调整长度和人物等字段提取",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M04",
+      "name": "多层摘要压缩与节点关系",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B1",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "上层摘要可追溯子项，不重复覆盖相同范围",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M05",
+      "name": "按楼数/token 阈值触发与批次上限",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B7"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "触发阈值、保留窗口和每批限制分别生效",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M06",
+      "name": "时间线事件分级、插入、编辑、删除与多选",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "普通/重要/关键事件能分别筛选和维护",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M07",
+      "name": "手动合并压缩、预览、审阅和撤销",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "用户可以检查合并结果并恢复原记录",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M08",
+      "name": "摘要/原始事件切换与节点失效处理",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B1",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "子项失效后不能继续注入包含它的旧总括",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M09",
+      "name": "旧消息隐藏、恢复与隐藏归属",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B2",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "摘要落盘成功后才隐藏；保留用户手动隐藏",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M10",
+      "name": "番外、小剧场排除与恢复",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "被排除楼不进入状态、摘要和召回",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M11",
+      "name": "纯摘要模式与结构化模块关闭",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "B7"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "只摘要时不新增人物/物品等结构化变更",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "M12",
+      "name": "内容清洗、标签规则与用户行动结算模式",
+      "moduleId": "02",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "思维块等不污染摘要；可识别用户行动来源",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T01",
+      "name": "故事日期、时刻、时间段与精度标记",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H2",
+        "H4",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "故事时间与真实保存时间分别记录",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T02",
+      "name": "相对时间与经过时长",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H4",
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "昨天、上周等均根据当前故事时间计算",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T03",
+      "name": "自定义月份、月长及架空日期",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H1",
+        "H4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "不把架空历法强行解析成公历日期",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T04",
+      "name": "缺失时间、时间跳跃、倒叙与手动纠正",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H4",
+        "B4",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "未知保持未知；倒叙不误覆盖当前时间",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T05",
+      "name": "时间标签、自动解析与发送前补全",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H1",
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "补全可关闭；不会静默改写无依据的历史",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "T06",
+      "name": "年龄与时间锚点关联",
+      "moduleId": "03",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "时间推进后年龄正确；未知锚点不猜测",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C01",
+      "name": "主角/NPC 身份、外貌、性格与经历",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H2",
+        "D1",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "同名不同人可区分，字段更新有来源",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C02",
+      "name": "当前衣着、身体状况与情绪",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "当前状态与历史记录分开，不互相覆盖",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C03",
+      "name": "在场、附近、离场、随行与位置",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "全部视图与注入共享同一在场判断",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C04",
+      "name": "核心角色分级、星标、置顶和筛选",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H1",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "重点角色可常驻，路人可精简",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C05",
+      "name": "数值好感与定性内心/外在态度",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H2",
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "数值和五档估计分别保存；未知不等于中性",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C06",
+      "name": "人物之间的关系网络",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "H2",
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "关系方向、对象与依据可查，不跨人合并",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C07",
+      "name": "关键事实 ID、认知来源与传播",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "亲历、听说、怀疑、不知可区分",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C08",
+      "name": "按角色约束认知注入",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "B4",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "私密谈话不会因进入摘要而让所有角色知情",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C09",
+      "name": "人物偏好、习惯与近况档案",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "按人物保存；一次行为不自动固化为习惯",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "C10",
+      "name": "角色成长与里程碑",
+      "moduleId": "04",
+      "evidenceCodes": [
+        "B1",
+        "B4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "里程碑可编辑、筛选并追溯对应楼层",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "I01",
+      "name": "物品 ID、名称、描述、数量与单位",
+      "moduleId": "05",
+      "evidenceCodes": [
+        "H2",
+        "D1",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "同名独立物品可区分；数量与单位不混淆",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "I02",
+      "name": "持有人、随身、寄存、转移与存放位置",
+      "moduleId": "05",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "转移只提交一次，界面与注入位置一致",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "I03",
+      "name": "获得、消耗、删除、归零与变动日志",
+      "moduleId": "05",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "相同动作不重复结算，撤回能恢复前态",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "I04",
+      "name": "普通/重要/关键物品与条件注入",
+      "moduleId": "05",
+      "evidenceCodes": [
+        "H2",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "关键物品保留；寄存物品按地点选择发送",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "I05",
+      "name": "约定、任务、期限、伏笔、悬念与核销",
+      "moduleId": "05",
+      "evidenceCodes": [
+        "H2",
+        "D1",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "完成、取消和失效可区分，不反复复活旧事项",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S01",
+      "name": "地点层级、地图树、别名与名称复用",
+      "moduleId": "06",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "重访同地不会重复建节点",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S02",
+      "name": "场景固定特征与当前场景焦点",
+      "moduleId": "06",
+      "evidenceCodes": [
+        "H2",
+        "B1"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "固定布局与本轮氛围分别更新",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S03",
+      "name": "场景匹配、按位置发送与手工维护",
+      "moduleId": "06",
+      "evidenceCodes": [
+        "H2",
+        "B2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "只发送相关场景，未知位置有明确状态",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S04",
+      "name": "天气分类/组合、自定义、自动间隔与固定模式",
+      "moduleId": "06",
+      "evidenceCodes": [
+        "B6"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "按故事时间到期；固定模式不调用天气 AI",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R01",
+      "name": "自定义 HP/MP/SP 等属性条",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "名称、颜色、上限与当前值可配置",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R02",
+      "name": "状态异常、Buff 与效果显示",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "添加/解除有来源，图标与文本含义一致",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R03",
+      "name": "多维属性、雷达与文字显示",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "自定义维度与两种显示共用同一数据",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R04",
+      "name": "技能归属、等级、描述与手工编辑",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "技能属于正确实体并支持撤回更新",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R05",
+      "name": "装备格位、种族模板和自定义模板",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "装备与物品关联，不生成两件冲突副本",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R06",
+      "name": "势力声望、细项、范围与变动",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "不同势力独立，超出配置范围可检查",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R07",
+      "name": "等级、经验、升级规则与进度",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "可表达原有规则；同一奖励不重复发放",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R08",
+      "name": "币种、兑换比例、据点/基地树",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1",
+        "H2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "币种与节点独立维护，导入后层级不丢",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "R09",
+      "name": "骰子面板、HUD、在场/仅主角显示与注入开关",
+      "moduleId": "07",
+      "evidenceCodes": [
+        "H1"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "骰子结果可见；关闭子模块不注入其提示词",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D01",
+      "name": "自定义表、列、行、说明和更新规则",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "H1",
+        "D1"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "表结构可配置，字段身份不依赖显示位置",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D02",
+      "name": "全局/角色模板与聊天独立实例",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "H1",
+        "D1",
+        "B7"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "共用模板不造成角色或聊天数据污染",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D03",
+      "name": "表格 CRUD、坐标显示、撤销与重做",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "H1",
+        "D5"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "操作经统一提交，视图与事实同步",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D04",
+      "name": "行、列、单元格锁定",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "H1",
+        "D5"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "AI、SQL 和外部 API 都遵守同一锁策略",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D05",
+      "name": "自动填表频率、上下文深度、批次与跳过规则",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "每张表可独立配置并查看更新前沿",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D06",
+      "name": "手工重填、历史回放与一键追平",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "重填与补后缀分开；中断不会留下半次提交",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D07",
+      "name": "更新组、表依赖与冲突校验",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D1",
+        "D2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "并发组冲突有明确拒绝或重试结果",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D08",
+      "name": "模板/指导信息的导入导出与切换",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "H1",
+        "D1"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "列改名、隐藏和映射冲突不会误绑定数据",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D09",
+      "name": "SQL 表结构、SQLite 查询与事务修改",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D1",
+        "D5"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "DDL 可校验；无效批次不部分修改事实",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D10",
+      "name": "JSON 视图、SQL 视图与稳定表/列/行 ID",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D1",
+        "D5",
+        "N"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "两种访问形式读取同一版本，无双写事实源",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D11",
+      "name": "原生 table_edit/table_sql 工具填表",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "D2",
+        "D3"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "支持渠道可调用；不支持时有明确处理策略",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "D12",
+      "name": "JSON 变量树、路径操作与分层模板",
+      "moduleId": "08",
+      "evidenceCodes": [
+        "B1",
+        "B7"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "全局/角色/聊天模板不混淆，路径操作可撤回",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V01",
+      "name": "本地 Worker embedding 与远程提供者",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "可分别选择生成向量与保存向量的方式",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V02",
+      "name": "OpenAI/Gemini embedding 适配",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "响应、维数、批次与错误类型正确解析",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V03",
+      "name": "语义、关键词、结构化条件与 BM25 检索",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "可独立开关与对比，不把关键词当事实",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V04",
+      "name": "多查询改写与 RRF 结果融合",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "多查询命中能去重，改写失败有基础查询",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V05",
+      "name": "可选 rerank、全文/摘要档与参数预设",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "阈值和条数可检查，实际发送档位可见",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V06",
+      "name": "经典压缩、纯向量、LLM 精读与混合模式",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "D3",
+        "H3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "四种能力均可用，模式切换不破坏历史数据",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V07",
+      "name": "按聊天/分支/模型/文本版本隔离索引",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3",
+        "N"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "不兼容模型向量不混算，源修改可重建",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V08",
+      "name": "去重、窗口排除、缓存与失败降级",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "近期已发送正文不重复召回，失败仍可生成",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V09",
+      "name": "索引进度、增量更新、修复、清理与重建",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "缺失/损坏状态可见，重建不改写事实",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "V10",
+      "name": "向量快照、旧档挂载与跨设备存储能力",
+      "moduleId": "09",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "明确本地/服务器差别，携带旧档后可验证召回",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P01",
+      "name": "状态、时间线、摘要、召回统一组装",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B2",
+        "D4",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "同一事件和状态不被三套提示重复发送",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P02",
+      "name": "角色、物品、关系、RPG 等分项开关",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B7"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "记录与展示可保留，但关闭的分项不注入",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P03",
+      "name": "位置、深度、角色与顺序配置",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B2",
+        "D4"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "可检查最终位置；不同宿主能力明确降级",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P04",
+      "name": "总预算、模块配额与截断规则",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B3",
+        "D3",
+        "N"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "优先保留当前状态，截断不产生残缺结构",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P05",
+      "name": "实际注入预览、来源与 token 估计",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B3",
+        "D11",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "显示提交材料；估计与实际计数明确区分",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P06",
+      "name": "提示词编辑、预设、宏与语言设置",
+      "moduleId": "10",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D2"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "编辑、导入、回到默认均可用，禁用模块不运行宏任务",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A01",
+      "name": "跟随酒馆主 API 或选择独立渠道",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D11"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "各任务可选择渠道；无配置时显示原因",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/gateway.test.js",
+        "tests/settings.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。主 API 与 OpenAI 兼容独立渠道已用模拟请求测试；其他原生协议未实现。"
+    },
+    {
+      "id": "A02",
+      "name": "摘要、压缩、提取、规划、Agent 分配渠道",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D7",
+        "D8"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "任务使用选定渠道并能查看调用来源",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A03",
+      "name": "embedding、rerank、查询改写独立配置",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H3",
+        "B7",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "无需强制共用聊天模型或端点",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A04",
+      "name": "模型选择、温度、输出限制、流式和参数兼容",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D11"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "不支持的参数可排除，配置错误可定位",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A05",
+      "name": "请求队列、429 退避、超时、取消与重试",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "B3",
+        "D2"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "重试有上限；取消后不继续消耗队列",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/gateway.test.js",
+        "tests/scheduler.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "A06",
+      "name": "主 API 回退策略、工具能力与健康检查",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "D2",
+        "B7",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "不静默改用昂贵渠道；能力检测结果可见",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A07",
+      "name": "凭据隔离、无密钥导出与配置作用域",
+      "moduleId": "11",
+      "evidenceCodes": [
+        "H1",
+        "B7",
+        "D11",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "分享配置不泄露 key；角色配置覆盖有明确顺序",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/settings.test.js",
+        "tests/gateway.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。独立渠道凭据仅保存在当前会话内，刷新后重新填写。"
+    },
+    {
+      "id": "W01",
+      "name": "角色绑定/手选世界书、条目选择与排除",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "B2",
+        "B5",
+        "D4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "选定与排除规则用于实际读取材料",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "W02",
+      "name": "激活扫描、模板渲染与旧宿主降级",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "B2",
+        "D4"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "条目 API 缺失时提示能力差异，内容可核查",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "W03",
+      "name": "表格按表/行输出、关键词条目与额外索引",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "D4"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "可配置输出模板、位置、关键词和顺序",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "W04",
+      "name": "条目同步、拥有者标记、清理与仅同步重试",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "D4",
+        "D2"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "不删除无关条目；同步失败不重复提交事实",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "W05",
+      "name": "txt 材料编码、分段、导入世界书/表格",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "D9"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "乱码可预览纠正；目标条目和表可选择",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "W06",
+      "name": "角色卡、用户设定与世界书材料来源分层",
+      "moduleId": "12",
+      "evidenceCodes": [
+        "B5",
+        "D4",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "设定材料不会直接冒充已发生剧情",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L01",
+      "name": "手动规划、编辑、下一次生成使用和追加输入",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5",
+        "D3"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "用户可选择交付方式，事实台账不提前变化",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L02",
+      "name": "自动规划、同轮缓存、失败放行与交付记录",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5",
+        "D3"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "同一用户输入重生成不重复规划调用",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L03",
+      "name": "默认/因果/场景导演/自定义规划策略",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "策略可切换，候选与最终选定规划可查看",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L04",
+      "name": "写实检查、认知边界与主支线偏好",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5",
+        "D3"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "不预设玩家决定，不复活已核销悬念",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L05",
+      "name": "世界书邂逅候选与当前条件匹配",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "候选不自动变事实，只影响待用规划",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L06",
+      "name": "多任务预设、顺序、提取标签与宏映射",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "B5",
+        "D3"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "导入可保留顺序，未知字段有兼容说明",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "L07",
+      "name": "正文替换、标签筛选、对比、测试与自动应用",
+      "moduleId": "13",
+      "evidenceCodes": [
+        "D10"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "测试不写聊天；应用后记忆有明确更新策略",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "name": "Agent 角色、提示词、工具与循环预算",
+      "moduleId": "14",
+      "evidenceCodes": [
+        "D6",
+        "D7",
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "迭代、读数、派工、并发和 token 限额生效",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "name": "资料目录、按需精读、证据引用与工具结果",
+      "moduleId": "14",
+      "evidenceCodes": [
+        "D6",
+        "D7",
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "引用能定位实际材料，不凭空声明已读取",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "name": "世界书 Skill 元信息与排序/选择",
+      "moduleId": "14",
+      "evidenceCodes": [
+        "D6"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "元信息可手工编辑，停用后可恢复原配置",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "name": "关闭/被动/接管模式与绿灯恢复",
+      "moduleId": "14",
+      "evidenceCodes": [
+        "D6"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "接管只修改目标范围；退出恢复原条目状态",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "name": "子任务委派、角色渠道、原生/文本工具协议",
+      "moduleId": "14",
+      "evidenceCodes": [
+        "D6",
+        "D7",
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "结果归属当前任务；失败与拒绝可追溯",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "U01",
+      "name": "续写目标、分卷/阶段大纲与审阅",
+      "moduleId": "15",
+      "evidenceCodes": [
+        "D7"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "用户可查看和修订计划后执行",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "U02",
+      "name": "单轮指令、节奏与故事时间推进",
+      "moduleId": "15",
+      "evidenceCodes": [
+        "D7"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "日常/压力/转折/余波可配置，轮次可追踪",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "U03",
+      "name": "委托酒馆正文生成与唯一回合归属",
+      "moduleId": "15",
+      "evidenceCodes": [
+        "D7"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "一轮只认领一条结果，拒绝/失败不会重复发楼",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "U04",
+      "name": "停止、恢复、重试、阶段/时长上限",
+      "moduleId": "15",
+      "evidenceCodes": [
+        "D7"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "达到上限停止；刷新后能恢复明确状态",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "U05",
+      "name": "重新规划、终审与可选网页资料研究",
+      "moduleId": "15",
+      "evidenceCodes": [
+        "D7"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "完成前缀不被重写；外部资料保留来源",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Y01",
+      "name": "场外时钟、世界维度和动态趋势",
+      "moduleId": "16",
+      "evidenceCodes": [
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "世界时钟与正文故事时间关系明确",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Y02",
+      "name": "事件种子、幕后人物、目标与长期行动",
+      "moduleId": "16",
+      "evidenceCodes": [
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "状态转换和依据可查，死亡角色不无故复活",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Y03",
+      "name": "流言传播、玩家区域、碰撞与揭露条件",
+      "moduleId": "16",
+      "evidenceCodes": [
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "私密事件只有满足传播/揭露条件才进入正文材料",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Y04",
+      "name": "世界纪要、错过事件与有限引导信号",
+      "moduleId": "16",
+      "evidenceCodes": [
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "信号不泄露被排除事实，历史能按来源精读",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Y05",
+      "name": "自动/手动触发、Agent/网页研究、暂停恢复与提交",
+      "moduleId": "16",
+      "evidenceCodes": [
+        "D8"
+      ],
+      "phase": "P4",
+      "status": "not_started",
+      "acceptance": "部分失败可见，任务不会留下未经确认的半份台账",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E01",
+      "name": "统一导航与仪表盘、轻量/进阶/完整界面",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B10"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "所有模块同一入口，隐藏页面不等于删除数据",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E02",
+      "name": "桌面/手机适配、长按与触屏表格操作",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B10"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "窄屏可完成编辑、审阅与任务停止",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E03",
+      "name": "顶栏、底栏、输入区、悬浮球和楼层面板",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "B10"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "入口独立开关，定位不遮挡发送与编辑",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E04",
+      "name": "人物/物品/地图/时间线与数据编辑视图",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B10"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "展示与注入读取同一版本的状态",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E05",
+      "name": "RPG HUD、图表与表格工作台",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "模块关闭后隐藏其视图，配置仍保留",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E06",
+      "name": "日夜主题、视觉编辑、图片装饰和自定义 CSS",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H7",
+        "B10",
+        "D11"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "样式作用域明确，主题导入有预览和恢复",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E07",
+      "name": "多语言 UI 与 AI 输出语言",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "H6"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "覆盖原有语言能力；切语言不改实体 ID",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E08",
+      "name": "新手引导、解释、任务进度和错误提示",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B10"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "无需进入日志也能理解未配置或失败原因",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E09",
+      "name": "桌宠、工作气泡、外观、位置与静默模式",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "D11"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "状态来自实际任务；关闭装饰不影响记忆",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "E10",
+      "name": "卡片配置档、提示词/主题预设与共享",
+      "moduleId": "17",
+      "evidenceCodes": [
+        "H1",
+        "D11",
+        "B7"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "切角色时应用方式明确，共享包不含凭据",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X01",
+      "name": "当前数据/配置备份、检查点与恢复",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "H1",
+        "D1",
+        "B9",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "恢复失败不破坏原数据，包含版本和来源",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/store.test.js",
+        "tests/runtime.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。同聊天、正文版本相同才可恢复；跨聊天迁移和任意检查点恢复 UI 后续接入。"
+    },
+    {
+      "id": "X02",
+      "name": "Horae 全字段识别与迁移映射",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "H2",
+        "B9",
+        "N"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "NPC/衣着/关系/RPG/表格等不能静默丢弃",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X03",
+      "name": "柏宝书叶子、压缩森林、增量与旧档导入",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "B1",
+        "B9",
+        "N"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "ID 和覆盖关系完整；有效 swipe 规则可检查",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X04",
+      "name": "数据库表/模板/SQL/checkpoint/delta 导入",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "D1",
+        "N"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "旧格式、退役隔离槽与表身份均显式映射",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X05",
+      "name": "手写旧总结导入与覆盖起点",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "B2",
+        "B9"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "明确覆盖范围，后续摘要不重复处理已覆盖楼",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X06",
+      "name": "带状态/摘要/近期正文/旧向量创建新对话",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "H1",
+        "H3",
+        "B9"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "可连续携带多代旧档，原聊天保持可恢复",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "X07",
+      "name": "迁移预览、冲突解决、未知字段备份与撤销",
+      "moduleId": "18",
+      "evidenceCodes": [
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "显示丢失项和历史缺口，不宣称未验证的无损迁移",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Q01",
+      "name": "运行日志、错误分类、筛选与导出",
+      "moduleId": "19",
+      "evidenceCodes": [
+        "D11",
+        "H3",
+        "B3"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "key 脱敏；提示词正文日志须用户主动开启",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/settings.test.js",
+        "tests/gateway.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "Q02",
+      "name": "摘要覆盖、状态版本、索引健康与任务检查",
+      "moduleId": "19",
+      "evidenceCodes": [
+        "B8",
+        "D11",
+        "N"
+      ],
+      "phase": "P1",
+      "status": "not_started",
+      "acceptance": "缺口与陈旧数据可见，不被成功提示掩盖",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Q03",
+      "name": "召回查询、候选分数、过滤原因和注入来源",
+      "moduleId": "19",
+      "evidenceCodes": [
+        "H3",
+        "B3",
+        "D3"
+      ],
+      "phase": "P2",
+      "status": "not_started",
+      "acceptance": "能解释某段记忆为何命中或被排除",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Q04",
+      "name": "SQL 控制台、运行时重新加载与性能观察",
+      "moduleId": "19",
+      "evidenceCodes": [
+        "D5",
+        "D11"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "重建内存不误删聊天；修改仍沿统一提交",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "Q05",
+      "name": "按范围清理、保留策略与索引垃圾回收",
+      "moduleId": "19",
+      "evidenceCodes": [
+        "H3",
+        "D1",
+        "D3",
+        "B3"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "清理前明确范围，不误删原始正文及无关世界书",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "J01",
+      "name": "新只读快照、历史查询、覆盖信息与订阅事件",
+      "moduleId": "20",
+      "evidenceCodes": [
+        "H1",
+        "B8",
+        "D5",
+        "N"
+      ],
+      "phase": "P0",
+      "status": "pending_acceptance",
+      "acceptance": "返回值不泄露可变引用，缺口可被调用方识别",
+      "verificationEvidence": [
+        "docs/P0-实现与验收.md",
+        "artifacts/p0-validation.json",
+        "tests/runtime.test.js",
+        "tests/store.test.js"
+      ],
+      "notes": "P0 底座已实现，46 项自动测试通过；真实酒馆、模型与 UI 尚未联调。"
+    },
+    {
+      "id": "J02",
+      "name": "受控写入、表格 CRUD、锁与版本冲突接口",
+      "moduleId": "20",
+      "evidenceCodes": [
+        "D5",
+        "N"
+      ],
+      "phase": "P3",
+      "status": "not_started",
+      "acceptance": "外部写入不能绕过事实来源、锁和提交校验",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "J03",
+      "name": "宏、斜杠命令与原接口兼容适配",
+      "moduleId": "20",
+      "evidenceCodes": [
+        "H1",
+        "B8",
+        "D5"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "分别列明支持项与差异，不伪造旧插件身份",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "J04",
+      "name": "UI 插槽、数据提供者与组件生命周期",
+      "moduleId": "20",
+      "evidenceCodes": [
+        "H5"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "render/update/dispose 可用；卸载后无残留监听",
+      "verificationEvidence": [],
+      "notes": ""
+    },
+    {
+      "id": "J05",
+      "name": "旧预设/模板/主题的兼容报告与降级",
+      "moduleId": "20",
+      "evidenceCodes": [
+        "H1",
+        "B5",
+        "D1",
+        "N"
+      ],
+      "phase": "P5",
+      "status": "not_started",
+      "acceptance": "未支持字段明确提示，数据能保留并导出",
+      "verificationEvidence": [],
+      "notes": ""
+    }
+  ],
+  "reviewOnly": [
+    {
+      "id": "Z01",
+      "finding": "数据库标签隔离功能已退役",
+      "evidence": "D12 文案明确停用，旧槽位保留兼容读取",
+      "handling": "X04 导入旧槽位；新底座用明确 chat/branch 作用域",
+      "status": "review_only"
+    },
+    {
+      "id": "Z02",
+      "finding": "数据库旧手动合并纪要按钮已停用",
+      "evidence": "`presentation/triggers/update-trigger.ts` 的函数只提示停用",
+      "handling": "M04/M07 提供统一摘要压缩；不复刻死按钮",
+      "status": "review_only"
+    },
+    {
+      "id": "Z03",
+      "finding": "柏宝书生理档案与生理时间线文件",
+      "evidence": "有 `physiology.ts`、`reproductive.ts` 和页面文件；当前页面注册表无对应入口，当前主要类型/应用路径未见接入",
+      "handling": "登记为待核实遗留/实验代码，不宣称当前可用；若要纳入，先定义独立模块和时间语义",
+      "status": "review_only"
+    },
+    {
+      "id": "Z04",
+      "finding": "柏宝书独立认知页面文件",
+      "evidence": "认知业务已进入记忆处理，但当前页面注册表未列独立 knowledge 页",
+      "handling": "C07/C08 保留认知能力；新界面可提供独立认知页，不按文件数量重复计功能",
+      "status": "review_only"
+    },
+    {
+      "id": "Z05",
+      "finding": "数据库飞行模式旧内部命名",
+      "evidence": "当前用户模式明确为经典、向量、LLM、交火",
+      "handling": "V06 覆盖现行模式；旧模式记录走兼容映射",
+      "status": "review_only"
+    }
+  ]
+}
