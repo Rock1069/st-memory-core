@@ -2,6 +2,12 @@ import { canonical, clone, CoreError, hash, id, requireThat, sleep } from '../co
 import { MESSAGE_KEY, STORAGE_KEY } from '../core/protocol.js';
 import { SETTINGS_KEY } from '../core/settings.js';
 
+function eventRemoval(source) {
+  if (typeof source?.removeListener === 'function') return source.removeListener.bind(source);
+  if (typeof source?.off === 'function') return source.off.bind(source);
+  return null;
+}
+
 export function classifyGeneration(type) {
   if (type === 'quiet') return 'internal';
   if (type === 'impersonate') return 'user';
@@ -17,10 +23,10 @@ export class SillyTavernHost {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       const context = this.context();
-      if (context?.eventSource?.on && context.eventSource.off && Array.isArray(context.chat) && context.chatMetadata && context.extensionSettings) return context;
+      if (typeof context?.eventSource?.on === 'function' && eventRemoval(context.eventSource) && Array.isArray(context.chat) && context.chatMetadata && context.extensionSettings) return context;
       await sleep(100, signal);
     }
-    throw new CoreError('HOST_UNAVAILABLE', '等待酒馆运行接口超时，请刷新后重试');
+    throw new CoreError('HOST_UNAVAILABLE', '等待酒馆运行接口超时，请检查酒馆是否加载完成后重试');
   }
   identity(context = this.context()) {
     const chatId = context?.getCurrentChatId?.();
@@ -117,14 +123,15 @@ export class SillyTavernHost {
   }
   bind(callback) {
     const context = this.context(); const types = context.eventTypes ?? context.event_types;
-    requireThat(types && context.eventSource?.off, 'HOST_CAPABILITY', '酒馆事件接口不完整');
+    const removeListener = eventRemoval(context.eventSource);
+    requireThat(types && typeof context.eventSource?.on === 'function' && removeListener, 'HOST_CAPABILITY', '酒馆事件接口不完整');
     const bindings = [];
     for (const name of ['CHAT_CHANGED', 'MESSAGE_SENT', 'USER_MESSAGE_RENDERED', 'CHARACTER_MESSAGE_RENDERED', 'MESSAGE_EDITED', 'MESSAGE_DELETED', 'MESSAGE_SWIPED', 'GENERATION_STARTED', 'GENERATION_STOPPED', 'GENERATION_ENDED']) {
       if (!types[name]) continue;
       const listener = (...args) => callback(name, args);
       context.eventSource.on(types[name], listener); bindings.push([types[name], listener]);
     }
-    return () => { for (const [event, listener] of bindings) context.eventSource.off(event, listener); };
+    return () => { for (const [event, listener] of bindings) removeListener(event, listener); };
   }
   capabilities() {
     const context = this.context();

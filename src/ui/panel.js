@@ -1,6 +1,7 @@
 import { canonical, id } from '../core/util.js';
 import { MODULES } from '../core/settings.js';
 import { mountNavigation } from './navigation.js';
+import { PLUGIN_VERSION } from '../core/version.js';
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -26,7 +27,8 @@ function pickJson() {
 const moduleNames = { core: '底座', memory: '记忆管理 · P1', retrieval: '记忆检索 · P2', tables: '表格 · P3', rpg: 'RPG · P3', plot: '剧情规划 · P4', agent: 'Agent · P4', continuation: '智能续写 · P4', simulation: '世界推演 · P4' };
 let activePanelDisposer;
 
-export function mountPanel(runtime) {
+function createShell() {
+  const reopen = document.getElementById('st-memory-core-dialog')?.hasAttribute('open');
   activePanelDisposer?.();
   document.getElementById('st-memory-core-panel')?.remove();
   const panel = node('section', undefined, 'memory-core-panel'); panel.id = 'st-memory-core-panel';
@@ -34,6 +36,47 @@ export function mountPanel(runtime) {
   const body = node('div', undefined, 'memory-core-body'); drawer.append(body); panel.append(drawer);
   const openButton = node('button', '打开面板', 'menu_button memory-core-open-panel'); openButton.type = 'button';
   body.append(openButton);
+  body.append(node('p', `插件版本 ${PLUGIN_VERSION}`, 'memory-core-muted'));
+  return { panel, drawer, body, openButton, reopen };
+}
+
+function attachShell({ panel, drawer, openButton, reopen }, cleanup = () => {}) {
+  const target = document.querySelector('#extensions_settings2') ?? document.querySelector('#extensions_settings');
+  if (target) target.append(panel);
+  else { panel.classList.add('memory-core-floating'); document.body.append(panel); drawer.open = false; }
+  const disposeNavigation = mountNavigation(panel, { drawer, openButton });
+  if (reopen) openButton.click();
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true; cleanup(); disposeNavigation(); panel.remove();
+    if (activePanelDisposer === dispose) activePanelDisposer = null;
+  };
+  activePanelDisposer = dispose;
+  return dispose;
+}
+
+// Navigation is available even while the host is loading or core startup fails.
+export function mountStartupPanel(retry) {
+  const shell = createShell(); shell.panel.dataset.state = 'starting';
+  const status = node('p', '正在等待酒馆加载并启动底座……'); status.setAttribute('role', 'status');
+  const environment = node('p', `访问方式：${location.protocol} · 浏览器安全上下文：${globalThis.isSecureContext ? '是' : '否'}`, 'memory-core-muted');
+  const errorText = node('p', '', 'memory-core-feedback'); errorText.setAttribute('role', 'alert');
+  const retryButton = node('button', '重试启动', 'menu_button'); retryButton.type = 'button'; retryButton.hidden = true;
+  retryButton.addEventListener('click', () => { retryButton.disabled = true; void retry(); });
+  shell.body.append(status, environment, errorText, retryButton);
+  const dispose = attachShell(shell);
+  return {
+    dispose,
+    fail(code, message) {
+      shell.panel.dataset.state = 'failed'; status.textContent = '底座启动失败';
+      errorText.textContent = `${code}：${message}`; retryButton.hidden = false;
+    },
+  };
+}
+
+export function mountPanel(runtime) {
+  const shell = createShell(); const { panel, body } = shell; panel.dataset.state = 'ready';
   const status = node('p'); const notice = node('p', '底座已加载。记忆提取、检索和 RPG 将在后续阶段接入。', 'memory-core-muted');
   const feedback = node('p', '', 'memory-core-feedback'); feedback.setAttribute('role', 'status');
   const enabledLabel = node('label'); const enabled = node('input'); enabled.type = 'checkbox'; enabledLabel.append(enabled, document.createTextNode(' 启用后台任务'));
@@ -141,21 +184,8 @@ export function mountPanel(runtime) {
     }
     logs.textContent = runtime.logger.entries({ level: logFilter.value || undefined }).slice(-30).map(entry => `${new Date(entry.at).toLocaleTimeString()} [${entry.level}] ${entry.code} ${entry.message}`).join('\n') || '暂无日志';
   }
-  const target = document.querySelector('#extensions_settings2') ?? document.querySelector('#extensions_settings');
-  if (target) target.append(panel);
-  else {
-    panel.classList.add('memory-core-floating'); document.body.append(panel);
-    drawer.open = false;
-  }
   const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); });
-  const disposeNavigation = mountNavigation(panel, { drawer, openButton });
+  const dispose = attachShell(shell, () => { clearTimeout(timer); unsubscribe(); });
   render();
-  let disposed = false;
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true; clearTimeout(timer); unsubscribe(); disposeNavigation(); panel.remove();
-    if (activePanelDisposer === dispose) activePanelDisposer = null;
-  };
-  activePanelDisposer = dispose;
   return dispose;
 }

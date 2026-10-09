@@ -45,12 +45,12 @@
     "runtimeIntegrationTested": false,
     "featureAcceptanceCompleted": false,
     "p0": {
-      "pluginVersion": "0.1.1",
-      "automatedTestsPassed": 46,
-      "checkedAt": "2026-10-09T13:49:40.899Z",
+      "pluginVersion": "0.1.2",
+      "automatedTestsPassed": 52,
+      "checkedAt": "2026-10-09T14:24:17.006Z",
       "realSillyTavernTested": false,
       "evidence": "artifacts/p0-validation.json",
-      "browserUiChecksPassed": 9,
+      "browserUiChecksPassed": 14,
       "browserEvidence": "artifacts/p0-ui-validation.json"
     }
   },
@@ -320,11 +320,12 @@
         "docs/P0-实现与验收.md",
         "artifacts/p0-validation.json",
         "tests/runtime.test.js",
+        "tests/compatibility.test.js",
         "artifacts/p0-ui-validation.json",
         "scripts/ui-smoke.mjs",
         "src/ui/navigation.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。0.1.2 兼容原生 removeListener；普通 HTTP 下入口可用，启动失败可查看错误和重试。"
     },
     {
       "id": "F02",
@@ -345,7 +346,7 @@
         "tests/runtime.test.js",
         "tests/store.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "F03",
@@ -363,9 +364,10 @@
         "docs/P0-实现与验收.md",
         "artifacts/p0-validation.json",
         "tests/runtime.test.js",
-        "tests/store.test.js"
+        "tests/store.test.js",
+        "tests/compatibility.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。0.1.2 UUID v4 / SHA-256 在普通 HTTP 和安全上下文间保持格式与摘要兼容。"
     },
     {
       "id": "F04",
@@ -385,7 +387,7 @@
         "artifacts/p0-validation.json",
         "tests/store.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "F05",
@@ -404,7 +406,7 @@
         "artifacts/p0-validation.json",
         "tests/store.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "F06",
@@ -424,7 +426,7 @@
         "tests/store.test.js",
         "tests/runtime.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。单实例提交与宿主内存版本校验；宿主没有服务端 CAS，不承诺跨设备并发隔离。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。单实例提交与宿主内存版本校验；宿主没有服务端 CAS，不承诺跨设备并发隔离。"
     },
     {
       "id": "F07",
@@ -445,7 +447,7 @@
         "tests/store.test.js",
         "tests/runtime.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。已实现来源失效与状态重放；摘要/检索实际视图在 P1/P2 接入后验收。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。已实现来源失效与状态重放；摘要/检索实际视图在 P1/P2 接入后验收。"
     },
     {
       "id": "F08",
@@ -466,7 +468,7 @@
         "tests/scheduler.test.js",
         "tests/gateway.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "F09",
@@ -487,7 +489,7 @@
         "tests/runtime.test.js",
         "tests/gateway.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。主 API 取消仅停止等待并拒绝迟到响应；独立渠道支持 AbortSignal。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。主 API 取消仅停止等待并拒绝迟到响应；独立渠道支持 AbortSignal。"
     },
     {
       "id": "F10",
@@ -507,7 +509,7 @@
         "artifacts/p0-validation.json",
         "tests/runtime.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "F11",
@@ -527,7 +529,7 @@
         "artifacts/p0-validation.json",
         "tests/store.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。人工事务与字段锁协议已测试；事实编辑 UI 在 P1 接入。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。人工事务与字段锁协议已测试；事实编辑 UI 在 P1 接入。"
     },
     {
       "id": "F12",
@@ -548,7 +550,7 @@
         "tests/settings.test.js",
         "tests/runtime.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。只开放 core；本插件 v0 配置升级保留恢复副本；旧插件迁移属于 P5。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。只开放 core；本插件 v0 配置升级保留恢复副本；旧插件迁移属于 P5。"
     },
     {
       "id": "M01",
@@ -1625,7 +1627,7 @@
         "tests/gateway.test.js",
         "tests/settings.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。主 API 与 OpenAI 兼容独立渠道已用模拟请求测试；其他原生协议未实现。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。主 API 与 OpenAI 兼容独立渠道已用模拟请求测试；其他原生协议未实现。"
     },
     {
       "id": "A02",
@@ -1691,7 +1693,7 @@
         "tests/gateway.test.js",
         "tests/scheduler.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "A06",
@@ -1728,7 +1730,7 @@
         "tests/settings.test.js",
         "tests/gateway.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。独立渠道凭据仅保存在当前会话内，刷新后重新填写。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。独立渠道凭据仅保存在当前会话内，刷新后重新填写。"
     },
     {
       "id": "W01",
@@ -2272,9 +2274,10 @@
         "docs/P0-实现与验收.md",
         "artifacts/p0-validation.json",
         "tests/store.test.js",
-        "tests/runtime.test.js"
+        "tests/runtime.test.js",
+        "tests/compatibility.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。同聊天、正文版本相同才可恢复；跨聊天迁移和任意检查点恢复 UI 后续接入。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。同聊天、正文版本相同才可恢复；跨聊天迁移和任意检查点恢复 UI 后续接入。"
     },
     {
       "id": "X02",
@@ -2380,7 +2383,7 @@
         "tests/settings.test.js",
         "tests/gateway.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "Q02",
@@ -2461,7 +2464,7 @@
         "tests/runtime.test.js",
         "tests/store.test.js"
       ],
-      "notes": "P0 底座已实现，46 项自动测试通过，另有 9 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
+      "notes": "P0 底座已实现，52 项自动测试通过，另有 14 项模拟宿主浏览器检查通过；真实酒馆、模型与手机实机尚未联调。"
     },
     {
       "id": "J02",

@@ -1,3 +1,5 @@
+import { sha256 } from './sha256.js';
+
 export class CoreError extends Error {
   constructor(code, message, details = {}) {
     super(message);
@@ -41,11 +43,20 @@ export function canonical(value) {
 
 export async function hash(value) {
   const bytes = new TextEncoder().encode(typeof value === 'string' ? value : canonical(value));
+  if (typeof globalThis.crypto?.subtle?.digest !== 'function') return sha256(bytes);
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export function id(prefix) { return `${prefix}_${globalThis.crypto.randomUUID()}`; }
+export function id(prefix) {
+  const crypto = globalThis.crypto;
+  if (typeof crypto?.randomUUID === 'function') return `${prefix}_${crypto.randomUUID()}`;
+  requireThat(typeof crypto?.getRandomValues === 'function', 'CRYPTO_UNAVAILABLE', '浏览器不支持生成随机身份，请更新浏览器后重试');
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${prefix}_${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export function textId(value, label = 'ID') {
   requireThat(typeof value === 'string' && value.length > 0 && value.length <= 512 && !forbidden.has(value), 'INVALID_ID', `${label}无效`);
   return value;

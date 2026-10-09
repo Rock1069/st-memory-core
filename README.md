@@ -1,22 +1,24 @@
 # 记忆中枢 · P0
 
-版本 `0.1.1`。重新编写的 SillyTavern 记忆管理扩展底座，后续按本项目清单接入 Horae、shujuku、柏宝书的功能。
+版本 `0.1.2`。重新编写的 SillyTavern 记忆管理扩展底座，后续按本项目清单接入 Horae、shujuku、柏宝书的功能。
 
 目前已实现统一事实库、稳定消息身份、来源版本校验、事务与幂等、状态重放、字段锁、任务队列、API 渠道、备份恢复、脱敏日志和只读接口。记忆提取、摘要、检索、RPG、表格和旧插件数据迁移仍在后续阶段。
 
 ## 安装与使用
 
-1. 解压 `artifacts/st-memory-core-0.1.1.zip`，得到 `st-memory-core` 文件夹。
+1. 解压 `artifacts/st-memory-core-0.1.2.zip`，得到 `st-memory-core` 文件夹。
 2. 将整个文件夹放入酒馆当前用户的 `extensions` 目录。默认用户通常为 `SillyTavern/data/default-user/extensions/st-memory-core`；自定义数据目录或其他用户使用对应目录。
 3. 刷新酒馆，点击左下角「魔法棒」→「记忆中枢」，直接打开面板弹窗。也可在顶部积木图标的扩展设置中展开「记忆中枢 · P0」，点击「打开面板」。如果宿主没有常用设置容器，设置入口会显示在右下角。
 4. 打开一个聊天，检查当前聊天名称、消息数和版本。可以创建检查点、导出备份、查看任务与日志。
 5. API 默认跟随酒馆主 API。独立渠道目前支持 OpenAI Chat Completions 兼容服务，填写基础地址、模型和密钥后选择默认渠道。
 
-从 0.1.0 升级：覆盖原来的 `st-memory-core` 扩展文件夹，再刷新页面；电脑上可用 `Ctrl+F5` 强制刷新。0.1.0 没有魔法棒入口，当时的打开路径是顶部积木图标 → 扩展设置 → 展开「记忆中枢 · P0」。0.1.1 保持原有事实库格式和配置格式。
+从 0.1.0 / 0.1.1 升级：将包内文件覆盖到原来的 `st-memory-core` 扩展文件夹，再刷新页面；电脑上可用 `Ctrl+F5` 强制刷新。确认 `manifest.json` 和面板显示版本 0.1.2。直接覆盖文件，不必删除扩展配置或聊天数据。事实库、备份和配置 schema 仍为版本 1。
 
 菜单弹窗可点击「关闭」、点击遮罩或按 Escape 收起。面板内尚未提交的表单输入在关闭、重开后保留。菜单延迟创建或被宿主重建时会重新挂载入口；禁用插件会移除入口和弹窗。
 
-如果新版在扩展管理列表可见、魔法棒仍没有入口，先确认没有被禁用、扩展版本为 0.1.1，并强制刷新。仍不出现时在浏览器控制台查看 `[记忆中枢]` 加载错误；管理列表可见仅表示 manifest 被发现，不表示运行入口成功启动。
+0.1.2 修复了两处启动兼容问题：酒馆原生事件解绑使用 `removeListener`，旧代码错误地要求 `off`；通过 `http://局域网 IP` 访问时，浏览器不提供 `crypto.randomUUID` 和 `crypto.subtle`。现在 UUID 使用 `getRandomValues` 生成，SHA-256 提供兼容实现，摘要结果与安全上下文一致，已有消息版本和备份可以继续使用。无需为打开本插件改用 HTTPS。依据：[酒馆事件接口源码](https://raw.githubusercontent.com/SillyTavern/SillyTavern/release/public/lib/eventemitter.js)、[randomUUID](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)、[SubtleCrypto](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/subtle)。
+
+入口会在等待宿主时挂载。启动失败后仍能通过魔法棒打开面板，看到版本、访问方式、错误码和「重试启动」按钮；解决宿主问题后可直接重试。如果连入口都没有，确认安装包没有多套一层目录、扩展已启用、已覆盖完整 `src` 文件夹，并在浏览器控制台查看脚本加载或模块 404 错误。扩展管理列表可见只表示 manifest 被发现。
 
 点击「测试默认渠道」才会发送诊断请求，可能产生模型费用。**独立渠道密钥仅保存在当前浏览器会话内，刷新后重新填写。** 导出配置与备份不包含凭据库。
 
@@ -49,7 +51,7 @@ npm run package
 
 `npm run verify` 将测试结果和源码哈希写入 `artifacts/p0-validation.json`。`npm run package` 使用 Windows PowerShell，将 `manifest.json`、入口、样式、源码和说明打包；研究仓库、开发测试和本地凭据不会装入扩展。
 
-可选浏览器验收：在可使用 Playwright 的开发环境执行 `npm run test:ui`。`MEMORY_CORE_BROWSER_PACKAGES` 可指定包含 Playwright 的 `node_modules` 目录，`MEMORY_CORE_BROWSER_EXECUTABLE` 可指定浏览器可执行文件；未设置时使用本项目依赖目录与 Playwright 默认 Chromium。该项不影响无依赖的底座测试或扩展安装。测试在模拟酒馆页面执行，包含魔法棒入口、关闭/启停、菜单延迟加载与 390px 窄屏；没有访问真实模型。
+可选浏览器验收：在可使用 Playwright 的开发环境执行 `npm run test:ui`。`MEMORY_CORE_BROWSER_PACKAGES` 可指定包含 Playwright 的 `node_modules` 目录，`MEMORY_CORE_BROWSER_EXECUTABLE` 可指定浏览器可执行文件；未设置时使用本项目依赖目录与 Playwright 默认 Chromium。该项不影响无依赖的底座测试或扩展安装。14 项检查在模拟酒馆页面执行，包含原生 `removeListener` 接口、普通 HTTP 环境、下载备份校验、失败重试、关闭/启停、菜单延迟加载和 390px 窄屏；没有访问真实模型。普通 HTTP 测试将 `memory-core.test` 解析到本地测试服务器，并实际确认 `isSecureContext === false`，没有把 localhost 测试当作局域网测试。
 
 - [P0 实现与验收记录](docs/P0-实现与验收.md)：18 条 P0 项目的实现证据及待执行的实机步骤。
 - [底座接口约定](docs/底座接口约定.md)：数据协议、事务、任务和模块接入方式。
