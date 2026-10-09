@@ -16,3 +16,20 @@
 .memory-core-panel pre { overflow: auto; max-height: 240px; white-space: pre-wrap; font-size: .85em; }
 .memory-core-floating { position: fixed; bottom: 12px; right: 12px; z-index: 1000; width: min(420px, calc(100vw - 24px)); max-height: 85vh; overflow: auto; box-shadow: 0 4px 22px #0006; }
 @media (max-width: 600px) { .memory-core-actions > button { flex: 1 1 40%; } }
+.memory-core-menu-entry { width: 100%; min-height: 44px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.memory-core-dialog { box-sizing: border-box; width: min(720px, calc(100vw - 24px)); max-width: none; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 0; border: 1px solid var(--SmartThemeBorderColor, #535763); border-radius: 12px; background: var(--SmartThemeBlurTintColor, #252a35); color: var(--SmartThemeBodyColor, #e6e9ef); overflow: hidden; }
+.memory-core-dialog:not([open]) { display: none; }
+.memory-core-dialog[open] { display: flex; flex-direction: column; }
+.memory-core-dialog::backdrop { background: #0009; }
+.memory-core-dialog[data-fallback] { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 10000; }
+.memory-core-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid var(--SmartThemeBorderColor, #535763); }
+.memory-core-dialog .memory-core-close { min-height: 44px; min-width: 64px; margin: 0; }
+.memory-core-dialog-content { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.memory-core-in-dialog { position: static; width: 100%; margin: 0; border: 0; box-shadow: none; max-height: none; }
+.memory-core-in-dialog > details > summary, .memory-core-in-dialog .memory-core-open-panel { display: none; }
+.memory-core-dialog .memory-core-body { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .memory-core-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  .memory-core-dialog .memory-core-panel input:not([type=checkbox]), .memory-core-dialog .memory-core-panel select { min-height: 44px; font-size: 16px; }
+  .memory-core-dialog .menu_button { min-height: 44px; }
+}

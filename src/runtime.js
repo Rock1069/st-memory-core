@@ -127,7 +127,7 @@ export class MemoryRuntime {
   }
   getHistory(options) { return this.#session && this.host.isCurrent(this.#session.capture) ? this.#session.store.history(options) : []; }
   capabilities() {
-    return { apiVersion: 1, pluginVersion: '0.1.0', modules: [...AVAILABLE_MODULES], host: this.host.capabilities(), storage: { schemaVersion: 1, commitAtomicity: 'single-runtime-chat-metadata', multiDeviceCAS: false }, memoryExtraction: false, retrieval: false };
+    return { apiVersion: 1, pluginVersion: '0.1.1', modules: [...AVAILABLE_MODULES], host: this.host.capabilities(), storage: { schemaVersion: 1, commitAtomicity: 'single-runtime-chat-metadata', multiDeviceCAS: false }, memoryExtraction: false, retrieval: false };
   }
   status() { return { capabilities: this.capabilities(), snapshot: this.getSnapshot(), tasks: this.scheduler.snapshot(), settings: this.settings.snapshot() }; }
   async checkpoint() { await this.sync(); this.capture(); return this.#session.store.checkpoint(); }
@@ -145,6 +145,6 @@ export class MemoryRuntime {
     return this.gateway.request({ key: id('diagnostic'), task: 'diagnostic', messages: [{ role: 'user', content: '请只回复 OK。' }], lease, assertCurrent: () => this.assertLease(lease), maxTokens: 32 });
   }
   publicApi() {
-    return Object.freeze({ apiVersion: 1, pluginVersion: '0.1.0', getCapabilities: () => clone(this.capabilities()), getSnapshot: options => clone(this.getSnapshot(options)), getHistory: options => clone(this.getHistory(options)), getSettings: () => this.settings.snapshot(), subscribe: listener => this.subscribe(listener) });
+    return Object.freeze({ apiVersion: 1, pluginVersion: '0.1.1', getCapabilities: () => clone(this.capabilities()), getSnapshot: options => clone(this.getSnapshot(options)), getHistory: options => clone(this.getHistory(options)), getSettings: () => this.settings.snapshot(), subscribe: listener => this.subscribe(listener) });
   }
 }

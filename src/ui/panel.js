@@ -1,5 +1,6 @@
 import { canonical, id } from '../core/util.js';
 import { MODULES } from '../core/settings.js';
+import { mountNavigation } from './navigation.js';
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -23,12 +24,16 @@ function pickJson() {
 }
 
 const moduleNames = { core: '底座', memory: '记忆管理 · P1', retrieval: '记忆检索 · P2', tables: '表格 · P3', rpg: 'RPG · P3', plot: '剧情规划 · P4', agent: 'Agent · P4', continuation: '智能续写 · P4', simulation: '世界推演 · P4' };
+let activePanelDisposer;
 
 export function mountPanel(runtime) {
+  activePanelDisposer?.();
   document.getElementById('st-memory-core-panel')?.remove();
   const panel = node('section', undefined, 'memory-core-panel'); panel.id = 'st-memory-core-panel';
   const drawer = node('details'); drawer.append(node('summary', '记忆中枢 · P0'));
   const body = node('div', undefined, 'memory-core-body'); drawer.append(body); panel.append(drawer);
+  const openButton = node('button', '打开面板', 'menu_button memory-core-open-panel'); openButton.type = 'button';
+  body.append(openButton);
   const status = node('p'); const notice = node('p', '底座已加载。记忆提取、检索和 RPG 将在后续阶段接入。', 'memory-core-muted');
   const feedback = node('p', '', 'memory-core-feedback'); feedback.setAttribute('role', 'status');
   const enabledLabel = node('label'); const enabled = node('input'); enabled.type = 'checkbox'; enabledLabel.append(enabled, document.createTextNode(' 启用后台任务'));
@@ -143,6 +148,14 @@ export function mountPanel(runtime) {
     drawer.open = false;
   }
   const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); });
+  const disposeNavigation = mountNavigation(panel, { drawer, openButton });
   render();
-  return () => { clearTimeout(timer); unsubscribe(); panel.remove(); };
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true; clearTimeout(timer); unsubscribe(); disposeNavigation(); panel.remove();
+    if (activePanelDisposer === dispose) activePanelDisposer = null;
+  };
+  activePanelDisposer = dispose;
+  return dispose;
 }

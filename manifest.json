@@ -7,7 +7,7 @@
   "js": "index.js",
   "css": "styles.css",
   "author": "ST-cpyoss",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "auto_update": false,
   "hooks": { "enable": "onEnable", "disable": "onDisable", "delete": "onDelete" }
 }
