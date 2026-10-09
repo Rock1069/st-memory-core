@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 const MENU_ID = 'st-memory-core-menu-container';
 const ITEM_ID = 'st-memory-core-menu-item';
 
@@ -14,18 +15,21 @@ export function mountNavigation(panel, { drawer, openButton }) {
   const dialog = element('dialog', 'memory-core-dialog'); dialog.id = 'st-memory-core-dialog';
   dialog.setAttribute('aria-labelledby', 'st-memory-core-dialog-title');
   const header = element('div', 'memory-core-dialog-header');
-  const title = element('strong', '', '记忆中枢 · P0'); title.id = 'st-memory-core-dialog-title';
+  const brand = element('div', 'memory-core-dialog-brand');
+  const title = element('strong', '', '记忆中枢'); title.id = 'st-memory-core-dialog-title';
+  brand.append(icon('memory', 'memory-core-brand-icon'), title, element('span', 'memory-core-brand-note', '故事的私人档案馆'));
   const closeButton = element('button', 'menu_button memory-core-close', '关闭'); closeButton.type = 'button';
+  closeButton.prepend(icon('close'));
   closeButton.setAttribute('aria-label', '关闭记忆中枢');
   const content = element('div', 'memory-core-dialog-content');
-  header.append(title, closeButton); dialog.append(header, content); document.body.append(dialog);
+  header.append(brand, closeButton); dialog.append(header, content); document.body.append(dialog);
 
   const menuContainer = element('div', 'extension_container'); menuContainer.id = MENU_ID;
   const menuItem = element('button', 'list-group-item flex-container flexGap5 interactable memory-core-menu-entry');
   menuItem.id = ITEM_ID; menuItem.type = 'button'; menuItem.title = '打开记忆中枢';
   menuItem.setAttribute('aria-haspopup', 'dialog'); menuItem.setAttribute('aria-controls', dialog.id);
-  const icon = element('i', 'fa-fw fa-solid fa-brain extensionsMenuExtensionButton'); icon.setAttribute('aria-hidden', 'true');
-  menuItem.append(icon, element('span', '', '记忆中枢')); menuContainer.append(menuItem);
+  const menuIcon = element('i', 'fa-fw fa-solid fa-brain extensionsMenuExtensionButton'); menuIcon.setAttribute('aria-hidden', 'true');
+  menuItem.append(menuIcon, element('span', '', '记忆中枢')); menuContainer.append(menuItem);
 
   let disposed = false; let placeholder; let previousOpen; let wasFloating; let returnFocus;
   function restorePanel() {
