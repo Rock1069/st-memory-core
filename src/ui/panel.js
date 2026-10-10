@@ -6,6 +6,8 @@ import { normalizeApiEndpoint } from '../core/gateway.js';
 import { icon, memoryMap } from './icons.js';
 import { mountWorkbench } from './workbench.js';
 import { mountExtraEntries } from './entries.js';
+import { mountQuickStart } from './quick-start.js';
+import { selectMemoryChannel } from '../core/simple-memory.js';
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -67,9 +69,10 @@ function attachShell({ panel, drawer, openButton, reopen }, cleanup = () => {}) 
 }
 function createTabs(body) {
   const nav = node('div', undefined, 'memory-core-tabs'); nav.setAttribute('role', 'tablist'); nav.setAttribute('aria-label', '记忆中枢功能');
-  const content = node('div', undefined, 'memory-core-views'); const tabs = []; const views = {};
+  const content = node('div', undefined, 'memory-core-views'); const tabs = []; const views = {}; let active = 'overview';
   const definitions = [['overview', '记忆概览', 'book'], ['summaries', '楼层摘要', 'spark'], ['workbench','记忆工作台','memory'], ['archive', '档案管理', 'archive'], ['api', 'API 渠道', 'connection'], ['activity', '任务与日志', 'activity']];
   function select(key) {
+    active = key;
     for (const item of tabs) { const selected = item.key === key; item.tab.setAttribute('aria-selected', String(selected)); item.tab.tabIndex = selected ? 0 : -1; views[item.key].hidden = !selected; }
   }
   for (const [key, label, iconName] of definitions) {
@@ -78,13 +81,18 @@ function createTabs(body) {
     tab.addEventListener('click', () => select(key));
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault();
-      const index = tabs.findIndex(item => item.key === key);
-      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-      select(tabs[next].key); tabs[next].tab.focus({ preventScroll: true }); tabs[next].tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      const visible = tabs.filter(item => !item.tab.hidden); const index = visible.findIndex(item => item.key === key);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? visible.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + visible.length) % visible.length;
+      select(visible[next].key); visible[next].tab.focus({ preventScroll: true }); visible[next].tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
     tabs.push({ key, tab }); views[key] = view; nav.append(tab); content.append(view);
   }
-  body.append(nav, content); select('overview'); return { views, select };
+  const setMode = mode => {
+    const light = mode === 'light';
+    for (const item of tabs) { item.tab.hidden = light && ['summaries','archive','activity'].includes(item.key); item.tab.querySelector('span').textContent = item.key === 'overview' ? '记忆首页' : item.key === 'workbench' ? light ? '查看记忆' : '记忆工作台' : definitions.find(def => def[0] === item.key)[1]; }
+    if (tabs.find(item => item.key === active)?.tab.hidden) select('overview');
+  };
+  body.append(nav, content); select('overview'); return { views, select, setMode };
 }
 export function mountStartupPanel(retry) {
   const shell = createShell(); shell.panel.dataset.state = 'starting';
@@ -98,10 +106,15 @@ export function mountStartupPanel(retry) {
   return { dispose, fail(code, text) { shell.panel.dataset.state = 'failed'; shell.statusBadge.textContent = '连接中断'; status.textContent = '底座启动失败'; errorText.textContent = `${code}：${text}`; errorText.dataset.tone = 'error'; retryButton.hidden = false; } };
 }
 export function mountPanel(runtime) {
-  const shell = createShell(); const { panel, body, statusBadge } = shell; panel.dataset.state = 'ready'; const { views, select } = createTabs(body);
+  const shell = createShell(); const { panel, body, statusBadge } = shell; panel.dataset.state = 'ready'; const { views, select, setMode } = createTabs(body);
   const feedback = node('p', '', 'memory-core-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
   const reportError = error => { runtime.logger.error(error); feedback.dataset.tone = 'error'; feedback.textContent = runtime.logger.redact(error.message ?? String(error)); };
   const workbench = mountWorkbench(views.workbench,runtime,(text,error = false) => { feedback.textContent = text; if (error) feedback.dataset.tone = 'error'; else delete feedback.dataset.tone; });
+  const quickStart = mountQuickStart(views.overview, runtime, {
+    onConnect: () => select('api'), onView: () => { select('workbench'); workbench.show('state'); },
+    onAdvanced: async () => { const config = runtime.settings.snapshot(); await runtime.settings.update({ui:{...config.ui,mode:'advanced'}}); render(); select('workbench'); workbench.show('settings'); },
+    report: (text, error = false) => { feedback.textContent = text; if (error) feedback.dataset.tone = 'error'; else delete feedback.dataset.tone; },
+  });
   const action = (label, handler, target, options = {}) => {
     const element = button(label, options.icon, options.className);
     if (options.description) { element.classList.add('memory-core-action-card'); element.append(node('small', options.description), icon('arrow', 'memory-core-action-arrow')); }
@@ -178,7 +191,7 @@ export function mountPanel(runtime) {
   const fetchModels = button('获取模型', 'refresh', 'memory-core-fetch-models'); fetchModels.title = '使用当前 API 地址和 Key 获取模型列表';
   for (const [key, label, type, placeholder] of [['name', '渠道名称', 'text', '例如：故事助手'], ['endpoint', 'API 基础地址（含 /v1 等路径）', 'url', 'https://api.example.com/v1'], ['secret', 'API Key（仅本次会话保存）', 'password', '输入 API Key'], ['model', '模型名称', 'text', '填写模型名，或一键获取']]) {
     const wrapper = node('div', undefined, 'memory-core-field'); const labelNode = node('label', label); const input = node('input'); input.id = `memory-core-channel-${key}`; labelNode.htmlFor = input.id;
-    input.type = type; input.placeholder = placeholder; input.autocomplete = key === 'secret' ? 'new-password' : 'off'; input.required = key !== 'secret'; wrapper.append(labelNode);
+    input.type = type; input.placeholder = key === 'name' ? '可留空，自动使用服务地址命名' : placeholder; input.autocomplete = key === 'secret' ? 'new-password' : 'off'; input.required = !['secret','name'].includes(key); wrapper.append(labelNode);
     if (key === 'model') { const row = node('div', undefined, 'memory-core-model-row'); row.append(input, fetchModels); wrapper.append(row); } else wrapper.append(input);
     form.append(wrapper); inputs[key] = input;
   }
@@ -221,8 +234,10 @@ export function mountPanel(runtime) {
     event.preventDefault(); cancelModelLookup(); saveChannel.disabled = true; delete feedback.dataset.tone;
     try {
       const channelId = id('channel'); const config = runtime.settings.snapshot();
-      await runtime.settings.update({ channels: [...config.channels, { id: channelId, name: inputs.name.value.trim(), endpoint: normalizeApiEndpoint(inputs.endpoint.value), model: inputs.model.value.trim(), timeoutMs: 120000, retries: 2 }] });
-      runtime.vault.set(channelId, inputs.secret.value.trim()); form.reset(); feedback.textContent = '渠道已添加，密钥仅在本次会话有效。';
+      const endpoint = normalizeApiEndpoint(inputs.endpoint.value); const patch = { channels: [...config.channels, { id: channelId, name: inputs.name.value.trim() || new URL(endpoint).hostname, endpoint, model: inputs.model.value.trim(), timeoutMs: 120000, retries: 2 }] };
+      if (config.ui.mode === 'light') await selectMemoryChannel(runtime, channelId, patch); else await runtime.settings.update(patch);
+      runtime.vault.set(channelId, inputs.secret.value.trim()); form.reset(); feedback.textContent = config.ui.mode === 'light' ? 'API 已连接。回到首页点击「开启自动记忆」即可。密钥仅在本次会话有效。' : '渠道已添加，密钥仅在本次会话有效。';
+      if (config.ui.mode === 'light') select('overview');
     } catch (error) { reportError(error); } finally { saveChannel.disabled = false; render(); }
   });
   const channelsCard = card('我的渠道', '独立渠道的密钥在刷新后需重新填写。', 'lock'); const channels = node('div', undefined, 'memory-core-channel-list'); channelsCard.append(channels); apiGrid.append(channelsCard);
@@ -242,6 +257,9 @@ export function mountPanel(runtime) {
   function render() {
     if (!panel.isConnected) return;
     const current = runtime.status(); const snapshot = current.snapshot; enabled.checked = current.settings.enabled; logBodies.checked = current.settings.logBodies;
+    const light = current.settings.ui.mode === 'light'; panel.dataset.uiMode = current.settings.ui.mode; setMode(current.settings.ui.mode);
+    for (const element of [scope, metrics, overviewGrid, coverage, roadmap, routeCard]) element.hidden = light;
+    quickStart.render();
     statusBadge.textContent = snapshot.active ? '档案已连接' : '等待故事开启'; statusBadge.dataset.tone = snapshot.active ? 'ready' : 'idle';
     chatName.textContent = snapshot.active ? snapshot.scope.chatId : '还没有打开聊天'; chatName.title = chatName.textContent;
     metricValues.messages.textContent = snapshot.active ? String(snapshot.messages.length) : '—'; metricValues.entities.textContent = snapshot.active ? String(Object.keys(snapshot.state.entities).length) : '—'; metricValues.revision.textContent = snapshot.active ? String(snapshot.revision) : '—';

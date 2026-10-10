@@ -19,6 +19,7 @@ const paths = {
   close: ['m6 6 12 12M6 18 18 6'],
   arrow: ['M5 12h14m-5-5 5 5-5 5'],
   spark: ['m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z'],
+  settings: ['M4 6h16M4 12h16M4 18h16', 'M8 3v6M16 9v6M10 15v6'],
 };
 export function icon(name, className = '') {
   const svg = svgNode('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false', class: `memory-core-icon ${className}` });
