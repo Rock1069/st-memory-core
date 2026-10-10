@@ -1,6 +1,7 @@
 import { canonical, clone, CoreError, hash, id, requireThat, sleep } from '../core/util.js';
 import { MESSAGE_KEY, STORAGE_KEY } from '../core/protocol.js';
 import { SETTINGS_KEY } from '../core/settings.js';
+import { scanEntries } from '../core/worldbook.js';
 
 function eventRemoval(source) {
   if (typeof source?.removeListener === 'function') return source.removeListener.bind(source);
@@ -121,12 +122,46 @@ export class SillyTavernHost {
       },
     };
   }
+  setMemoryPrompt(text) {
+    const context = this.context();
+    if (typeof context?.setExtensionPrompt !== 'function') return false;
+    context.setExtensionPrompt('st-memory-core', String(text), 1, 1, false, 0); return true;
+  }
+  async worldbookMaterials(config) {
+    const context = this.context();
+    const card = context?.characters?.[Number(context.characterId)];
+    const names = new Set(config.books);
+    if (config.bound) { if (card?.data?.extensions?.world || card?.world) names.add(card?.data?.extensions?.world || card.world); if (context.chatMetadata?.world_info) names.add(context.chatMetadata.world_info); }
+    const settings = [{ id: 'character-card', origin: 'character-setting', text: [card?.description ?? card?.data?.description, card?.personality ?? card?.data?.personality, card?.scenario ?? card?.data?.scenario].filter(Boolean).join('\n') }, { id: 'persona', origin: 'user-setting', text: context?.powerUserSettings?.persona_description ?? '' }].filter(x => x.text);
+    if (!config.enabled) return { materials: settings, entries: [], books: context?.getWorldInfoNames?.() ?? [], warnings: [], scanMode: 'disabled' };
+    if (typeof context?.loadWorldInfo !== 'function') return { materials: settings, entries: [], books: [], warnings: ['宿主没有 loadWorldInfo，无法读取条目。请升级酒馆或关闭世界书读取。'], scanMode: 'unavailable' };
+    const books = []; const warnings = [];
+    for (const name of names) { const data = await context.loadWorldInfo(name); if (data) books.push({ name, data }); else warnings.push(`世界书「${name}」不存在或无法读取`); }
+    const text = (context.chat ?? []).slice(-config.scanDepth).map(m => m.mes ?? '').join('\n');
+    const result = scanEntries(books,config,text,value => typeof context.substituteParams === 'function' ? context.substituteParams(value) : value);
+    return { ...result, warnings:[...warnings,...result.warnings,...(typeof context.substituteParams !== 'function' ? ['宿主没有模板宏接口，条目保留原文'] : [])], materials: [...settings,...result.materials], books: context.getWorldInfoNames?.() ?? [...names] };
+  }
+  async hideMessages(capture, allowedIds, restore = false) {
+    this.assertCurrent(capture); const changes = [];
+    for (const message of capture.chat) {
+      if (!allowedIds.includes(message[MESSAGE_KEY])) continue;
+      const marker = message.extra?.st_memory_core_hidden;
+      if (restore) { if (marker?.owner === 'st-memory-core' && message.is_system === true) { changes.push({ message, previous: true, marker }); message.is_system = false; delete message.extra.st_memory_core_hidden; } }
+      else if (!message.is_system) { message.extra ??= {}; changes.push({ message, previous: message.is_system ?? false, marker: null }); message.extra.st_memory_core_hidden = { owner: 'st-memory-core', version: message.swipe_id ?? 0 }; message.is_system = true; }
+    }
+    if (!changes.length) return 0;
+    try { await capture.context.saveChat(); this.assertCurrent(capture); }
+    catch (error) { for (const change of changes) { change.message.is_system = change.previous; if (change.marker) change.message.extra.st_memory_core_hidden = change.marker; else delete change.message.extra.st_memory_core_hidden; } throw error; }
+    for (const change of changes) { const index = capture.chat.indexOf(change.message); globalThis.document?.querySelector(`.mes[mesid="${index}"]`)?.setAttribute('is_system',String(change.message.is_system)); if (typeof capture.context.updateMessageBlock === 'function') capture.context.updateMessageBlock(index,change.message,{rerenderMessage:false}); }
+    if (capture.context.swipe?.refresh) capture.context.swipe.refresh(); else capture.context.refreshSwipeButtons?.();
+    return changes.length;
+  }
   bind(callback) {
     const context = this.context(); const types = context.eventTypes ?? context.event_types;
     const removeListener = eventRemoval(context.eventSource);
     requireThat(types && typeof context.eventSource?.on === 'function' && removeListener, 'HOST_CAPABILITY', '酒馆事件接口不完整');
     const bindings = [];
-    for (const name of ['CHAT_CHANGED', 'MESSAGE_SENT', 'USER_MESSAGE_RENDERED', 'CHARACTER_MESSAGE_RENDERED', 'MESSAGE_EDITED', 'MESSAGE_DELETED', 'MESSAGE_SWIPED', 'GENERATION_STARTED', 'GENERATION_STOPPED', 'GENERATION_ENDED']) {
+    for (const name of ['CHAT_CHANGED', 'MESSAGE_SENT', 'USER_MESSAGE_RENDERED', 'CHARACTER_MESSAGE_RENDERED', 'MESSAGE_EDITED', 'MESSAGE_DELETED', 'MESSAGE_SWIPED', 'GENERATION_STARTED', 'GENERATION_AFTER_COMMANDS', 'GENERATION_STOPPED', 'GENERATION_ENDED', 'WORLDINFO_UPDATED', 'WORLDINFO_SETTINGS_UPDATED']) {
       if (!types[name]) continue;
       const listener = (...args) => callback(name, args);
       context.eventSource.on(types[name], listener); bindings.push([types[name], listener]);
@@ -135,6 +170,6 @@ export class SillyTavernHost {
   }
   capabilities() {
     const context = this.context();
-    return { metadata: typeof context?.saveMetadata === 'function', messagePersistence: typeof context?.saveChat === 'function', mainApi: typeof context?.generateRaw === 'function', mainApiAbort: false, customApi: typeof context?.getRequestHeaders === 'function', promptInjection: typeof context?.setExtensionPrompt === 'function' };
+    return { metadata: typeof context?.saveMetadata === 'function', messagePersistence: typeof context?.saveChat === 'function', mainApi: typeof context?.generateRaw === 'function', mainApiAbort: false, customApi: typeof context?.getRequestHeaders === 'function', promptInjection: typeof context?.setExtensionPrompt === 'function', generationBeforePrompt: !!(context?.eventTypes ?? context?.event_types)?.GENERATION_AFTER_COMMANDS, worldbookRead: typeof context?.loadWorldInfo === 'function', worldbookNames: typeof context?.getWorldInfoNames === 'function', macros: typeof context?.substituteParams === 'function', tools: context?.isToolCallingSupported?.() ?? false, mainApiSampling: 'host-settings', mainApiStreaming: false };
   }
 }

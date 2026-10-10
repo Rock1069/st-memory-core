@@ -1,4 +1,5 @@
 import { canonical, clone, CoreError, getPath, pathParts, requireThat, setPath, textId } from './util.js';
+import { validateReferences } from './domain.js';
 
 export const DOCUMENT_VERSION = 1;
 export const STORAGE_KEY = 'st_memory_core';
@@ -32,7 +33,8 @@ export function validateChanges(change) {
   change.dependsOn.forEach(eventId => textId(eventId));
   for (const op of change.ops) {
     textId(op.entityId);
-    requireThat(['create', 'remove', 'set', 'unset', 'increment', 'lock', 'unlock'].includes(op.type), 'INVALID_OPERATION', '操作类型无效');
+    requireThat(['create', 'remove', 'set', 'unset', 'increment', 'lock', 'unlock', 'rename'].includes(op.type), 'INVALID_OPERATION', '操作类型无效');
+    if (op.entityId.startsWith('exclusion_')) requireThat(change.origin === 'human', 'EXCLUSION_PERMISSION', '排除规则只能由人工修改');
     if (op.type === 'create') {
       textId(op.entityKind, '实体类型');
       textId(op.name, '名称');
@@ -40,7 +42,8 @@ export function validateChanges(change) {
       (op.aliases ?? []).forEach(alias => textId(alias, '别名'));
       requireThat(op.fields && typeof op.fields === 'object' && !Array.isArray(op.fields), 'INVALID_OPERATION', '实体字段必须为对象');
     }
-    if (!['create', 'remove'].includes(op.type)) pathParts(op.path);
+    if (!['create', 'remove','rename'].includes(op.type)) pathParts(op.path);
+    if (op.type === 'rename') { requireThat(change.origin === 'human', 'RENAME_PERMISSION', '名称由人工维护'); textId(op.name); requireThat(Array.isArray(op.aliases), 'INVALID_OPERATION', '别名须为数组'); op.aliases.forEach(alias => textId(alias)); }
     if (op.type === 'set') requireThat(Object.hasOwn(op, 'value'), 'INVALID_OPERATION', '缺少字段值');
     if (op.type === 'increment') requireThat(Number.isFinite(op.amount), 'INVALID_OPERATION', '增量必须为有限数字');
     if (['lock', 'unlock'].includes(op.type)) requireThat(change.origin === 'human', 'LOCK_PERMISSION', '只有人工操作可以修改锁');
@@ -105,7 +108,8 @@ export function applyOperations(state, change, { replay = false } = {}) {
       const locked = Object.values(next.locks).some(lock => lock.entityId === op.entityId && (op.type === 'remove' || pathsOverlap(lock.path, op.path)));
       requireThat(!locked, 'FIELD_LOCKED', '字段已被人工锁定');
     }
-    if (op.type === 'remove') {
+    if (op.type === 'rename') { entity.name = op.name; entity.aliases = clone(op.aliases); }
+    else if (op.type === 'remove') {
       delete next.entities[op.entityId];
       for (const [key, lock] of Object.entries(next.locks)) if (lock.entityId === op.entityId) delete next.locks[key];
     } else if (op.type === 'lock') next.locks[lockKey(op.entityId, op.path)] = { entityId: op.entityId, path: clone(op.path), eventId: change.id };
@@ -124,14 +128,22 @@ export function project(document, revision = document.revision) {
   const messages = clone(currentMessages(document, revision));
   const active = new Map(messages.map(message => [message.id, message.versionId]));
   const applied = new Set(); const skipped = [];
+  let controls = emptyState();
+  for (const entry of document.journal) {
+    if (entry.revision > revision || entry.kind !== 'changes' || entry.origin !== 'human') continue;
+    const ops = entry.ops.filter(op => op.entityId.startsWith('exclusion_'));
+    if (ops.length) { try { controls = applyOperations(controls, { ...entry, ops }, { replay: true }); } catch { /* A malformed legacy control does not affect sources. */ } }
+  }
+  const excluded = new Set(Object.values(controls.entities).filter(e => e.kind === 'exclusion' && e.fields.excluded).map(e => e.fields.messageId));
   let state = emptyState();
   for (const entry of document.journal) {
     if (entry.revision > revision || entry.kind !== 'changes') continue;
     let reason = null;
-    if (entry.evidence.some(ref => active.get(ref.messageId) !== ref.versionId)) reason = 'SOURCE_INACTIVE';
+    if (entry.evidence.some(ref => excluded.has(ref.messageId))) reason = 'SOURCE_EXCLUDED';
+    else if (entry.evidence.some(ref => active.get(ref.messageId) !== ref.versionId)) reason = 'SOURCE_INACTIVE';
     else if (entry.dependsOn.some(dependency => !applied.has(dependency))) reason = 'DEPENDENCY_INACTIVE';
     if (!reason) {
-      try { state = applyOperations(state, entry, { replay: true }); applied.add(entry.id); }
+      try { const next = applyOperations(state, entry, { replay: true }); validateReferences(next.entities); state = next; applied.add(entry.id); }
       catch (error) { if (!(error instanceof CoreError)) throw error; reason = error.code; }
     }
     if (reason) skipped.push({ eventId: entry.id, reason });

@@ -3,6 +3,8 @@ import { MODULES } from '../core/settings.js';
 import { mountNavigation } from './navigation.js';
 import { PLUGIN_VERSION } from '../core/version.js';
 import { icon, memoryMap } from './icons.js';
+import { mountWorkbench } from './workbench.js';
+import { mountExtraEntries } from './entries.js';
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -65,7 +67,7 @@ function attachShell({ panel, drawer, openButton, reopen }, cleanup = () => {}) 
 function createTabs(body) {
   const nav = node('div', undefined, 'memory-core-tabs'); nav.setAttribute('role', 'tablist'); nav.setAttribute('aria-label', '记忆中枢功能');
   const content = node('div', undefined, 'memory-core-views'); const tabs = []; const views = {};
-  const definitions = [['overview', '记忆概览', 'book'], ['archive', '档案管理', 'archive'], ['api', 'API 渠道', 'connection'], ['activity', '任务与日志', 'activity']];
+  const definitions = [['overview', '记忆概览', 'book'], ['summaries', '楼层摘要', 'spark'], ['workbench','记忆工作台','memory'], ['archive', '档案管理', 'archive'], ['api', 'API 渠道', 'connection'], ['activity', '任务与日志', 'activity']];
   function select(key) {
     for (const item of tabs) { const selected = item.key === key; item.tab.setAttribute('aria-selected', String(selected)); item.tab.tabIndex = selected ? 0 : -1; views[item.key].hidden = !selected; }
   }
@@ -98,6 +100,7 @@ export function mountPanel(runtime) {
   const shell = createShell(); const { panel, body, statusBadge } = shell; panel.dataset.state = 'ready'; const { views, select } = createTabs(body);
   const feedback = node('p', '', 'memory-core-feedback'); feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
   const reportError = error => { runtime.logger.error(error); feedback.dataset.tone = 'error'; feedback.textContent = runtime.logger.redact(error.message ?? String(error)); };
+  const workbench = mountWorkbench(views.workbench,runtime,(text,error = false) => { feedback.textContent = text; if (error) feedback.dataset.tone = 'error'; else delete feedback.dataset.tone; });
   const action = (label, handler, target, options = {}) => {
     const element = button(label, options.icon, options.className);
     if (options.description) { element.classList.add('memory-core-action-card'); element.append(node('small', options.description), icon('arrow', 'memory-core-action-arrow')); }
@@ -114,7 +117,7 @@ export function mountPanel(runtime) {
     if (!globalThis.confirm('将当前聊天的事实库恢复到备份版本。原始正文保持当前状态；仅支持相同聊天、相同正文版本的备份。')) return;
     await runtime.restore(backup); feedback.textContent = '事实库已恢复。';
   };
-  // Overview uses only real runtime data; extraction remains a planned feature.
+  // Overview uses the committed projection and reports summary gaps separately from later structured extraction.
   const scope = node('div', undefined, 'memory-core-scope'); const scopeCopy = node('div'); scopeCopy.append(node('span', '当前故事', 'memory-core-overline'));
   const chatName = node('strong', '', 'memory-core-chat-name'); scopeCopy.append(chatName);
   const enabledLabel = node('label', undefined, 'memory-core-switch'); const enabled = node('input'); enabled.type = 'checkbox'; enabled.setAttribute('aria-label', '启用后台任务');
@@ -133,8 +136,25 @@ export function mountPanel(runtime) {
   const archiveLink = button('查看档案工具', 'arrow', 'memory-core-text-button'); archiveLink.addEventListener('click', () => select('archive')); keepCard.append(archiveLink); overviewGrid.append(keepCard);
   const coverage = node('div', undefined, 'memory-core-coverage'); coverage.append(icon('spark')); const coverageText = node('p'); coverage.append(coverageText); views.overview.append(coverage);
   const roadmap = node('details', undefined, 'memory-core-roadmap'); roadmap.append(node('summary', '更多记忆能力')); const modules = node('div', undefined, 'memory-core-modules');
-  for (const module of Object.keys(MODULES).filter(module => module !== 'core')) { const item = node('span', undefined, 'memory-core-planned-module'); item.append(node('span', moduleNames[module]), node('small', '待接入')); modules.append(item); }
+  for (const module of Object.keys(MODULES).filter(module => !['core', 'memory'].includes(module))) { const item = node('span', undefined, 'memory-core-planned-module'); item.append(node('span', moduleNames[module]), node('small', '待接入')); modules.append(item); }
   roadmap.append(modules); views.overview.append(roadmap);
+
+  const summaryIntro = node('div', undefined, 'memory-core-section-intro'); summaryIntro.append(node('h3', '逐楼留下摘要'), node('p', '摘要与当前正文版本绑定。编辑或切换回复页后，旧摘要会失效并显示缺口。状态提取、范围审阅与压缩在记忆工作台。')); views.summaries.append(summaryIntro);
+  const summaryControls = card('摘要任务', '自动摘要默认关闭；启用后每轮按楼数上限处理最新缺口。手动补摘从最早缺口开始。', 'spark');
+  const memoryLabel = node('label', undefined, 'memory-core-check-label'); const memoryEnabled = node('input'); memoryEnabled.type = 'checkbox'; memoryLabel.append(memoryEnabled, node('span', '启用故事记忆模块')); summaryControls.append(memoryLabel);
+  memoryEnabled.addEventListener('change', () => { const config = runtime.settings.snapshot(); update({ modules: { ...config.modules, memory: memoryEnabled.checked } }); });
+    const autoLabel = node('label', undefined, 'memory-core-check-label'); const autoSummary = node('input'); autoSummary.type = 'checkbox'; autoLabel.append(autoSummary, node('span', '按阈值自动分析正文（遵循工作台选项）')); summaryControls.append(autoLabel);
+  autoSummary.addEventListener('change', () => { const config = runtime.settings.snapshot(); update({ memory: { ...config.memory, autoSummarize: autoSummary.checked } }); });
+    const batchLabel = node('label', '自动分析每轮楼数上限', 'memory-core-field'); const batchLimit = node('input'); batchLimit.type = 'number'; batchLimit.min = '1'; batchLimit.max = '100';
+  batchLabel.append(batchLimit); summaryControls.append(batchLabel);
+  batchLimit.addEventListener('change', () => { const config = runtime.settings.snapshot(); update({ memory: { ...config.memory, maxMessagesPerRun: Number(batchLimit.value) } }); });
+  const summaryRouteLabel = node('label', '摘要 API 渠道', 'memory-core-field'); const summaryRoute = node('select'); summaryRoute.setAttribute('aria-label', '摘要 API 渠道'); summaryRouteLabel.append(summaryRoute); summaryControls.append(summaryRouteLabel);
+  summaryRoute.addEventListener('change', () => { const config = runtime.settings.snapshot(); update({ routing: { ...config.routing, summary: summaryRoute.value } }); });
+  const summaryActions = node('div', undefined, 'memory-core-actions'); summaryControls.append(summaryActions);
+  action('补摘前 20 个缺口', async () => { const result = await runtime.summarizeMissing({ limit: 20 }); feedback.textContent = `已补摘 ${result.completed} 楼，剩余 ${result.remaining} 个缺口。`; }, summaryActions, { icon: 'spark', className: 'memory-core-primary' });
+  views.summaries.append(summaryControls);
+  const summaryListCard = card('摘要与缺口', '显示最近 40 个有效楼层。可以手写或修订摘要；人工修订会锁定摘要正文。', 'book');
+  const summaryCount = node('p', '', 'memory-core-muted'); const summaryList = node('div', undefined, 'memory-core-summary-list'); summaryListCard.append(summaryCount, summaryList); views.summaries.append(summaryListCard);
 
   const archiveIntro = node('div', undefined, 'memory-core-section-intro'); archiveIntro.append(node('h3', '把重要的此刻，妥善收藏。'), node('p', '管理当前聊天的检查点、事实库备份与扩展配置。')); views.archive.append(archiveIntro);
   const archiveTools = node('div', undefined, 'memory-core-archive-tools'); views.archive.append(archiveTools);
@@ -178,7 +198,7 @@ export function mountPanel(runtime) {
   const logs = node('pre', undefined, 'memory-core-log-output'); logCard.append(logs); views.activity.append(logCard);
   const footer = node('div', undefined, 'memory-core-footer'); footer.append(node('span', '每一个片段，都有来处。'), node('span', '记忆中枢')); body.append(feedback, footer);
 
-  let timer; let channelsSignature; let routeSignature; let timelineSignature;
+  let timer; let channelsSignature; let routeSignature; let summaryRouteSignature; let timelineSignature; let summarySignature;
   const taskNames = { queued: '排队中', running: '运行中', retrying: '重试中', succeeded: '已完成', failed: '失败', cancelled: '已取消' };
   function render() {
     if (!panel.isConnected) return;
@@ -186,7 +206,23 @@ export function mountPanel(runtime) {
     statusBadge.textContent = snapshot.active ? '档案已连接' : '等待故事开启'; statusBadge.dataset.tone = snapshot.active ? 'ready' : 'idle';
     chatName.textContent = snapshot.active ? snapshot.scope.chatId : '还没有打开聊天'; chatName.title = chatName.textContent;
     metricValues.messages.textContent = snapshot.active ? String(snapshot.messages.length) : '—'; metricValues.entities.textContent = snapshot.active ? String(Object.keys(snapshot.state.entities).length) : '—'; metricValues.revision.textContent = snapshot.active ? String(snapshot.revision) : '—';
-    coverageText.textContent = snapshot.coverage.reason === 'SOURCE_UNSYNCED' ? '正文已改变，正在等待同步。' : '事实底座已就绪。自动记忆提取与检索将在后续阶段接入。';
+    const summaryCoverage = snapshot.coverage.summary;
+    coverageText.textContent = snapshot.coverage.reason === 'SOURCE_UNSYNCED' ? '正文已改变，正在等待同步。' : summaryCoverage ? `楼层摘要 ${summaryCoverage.summarized}/${summaryCoverage.eligible}；状态提取 ${summaryCoverage.extracted}/${summaryCoverage.eligible}；缺口 ${summaryCoverage.missing.length}。${snapshot.coverage.complete ? '当前模式已覆盖。' : '可在记忆工作台继续分析。'}` : '打开聊天后可以查看摘要覆盖。';
+    memoryEnabled.checked = current.settings.modules.memory; autoSummary.checked = current.settings.memory.autoSummarize; autoSummary.disabled = !memoryEnabled.checked; batchLimit.value = String(current.settings.memory.maxMessagesPerRun);
+    summaryCount.textContent = summaryCoverage ? `有效楼层 ${summaryCoverage.eligible} · 已摘 ${summaryCoverage.summarized} · 待补 ${summaryCoverage.missing.length}` : '打开聊天后查看楼层摘要。';
+    const summaryItems = runtime.summaryItems().slice(-40).reverse();
+    const nextSummarySignature = canonical(summaryItems);
+    if (summarySignature !== nextSummarySignature) {
+      summarySignature = nextSummarySignature; summaryList.replaceChildren();
+      if (!summaryItems.length) summaryList.append(emptyState('暂无可摘要楼层', '打开聊天并同步正文后，楼层会出现在这里。'));
+      for (const item of summaryItems) {
+        const row = node('div', undefined, 'memory-core-summary-row'); const heading = node('div', undefined, 'memory-core-summary-heading');
+        heading.append(node('strong', `第 ${item.index + 1} 楼 · ${item.role === 'user' ? '用户' : '角色'}`), node('span', item.summarized ? '已摘要' : '待补摘', 'memory-core-badge')); row.append(heading);
+        const editor = node('textarea'); editor.value = item.text; editor.rows = 3; editor.placeholder = '在这里手写摘要，或先使用补摘任务'; editor.setAttribute('aria-label', `第 ${item.index + 1} 楼摘要`); row.append(editor);
+        action('保存人工摘要', async () => { await runtime.saveSummary(item.messageId, editor.value); feedback.textContent = `第 ${item.index + 1} 楼摘要已保存。`; }, row, { icon: 'checkpoint' });
+        summaryList.append(row);
+      }
+    }
     const history = snapshot.active ? runtime.getHistory({ after: Math.max(0, snapshot.revision - 4), limit: 4 }).reverse() : []; const nextTimelineSignature = canonical(history);
     if (timelineSignature !== nextTimelineSignature) {
       timelineSignature = nextTimelineSignature; timeline.replaceChildren();
@@ -201,6 +237,12 @@ export function mountPanel(runtime) {
     if (routeSignature !== nextRouteSignature) {
       routeSignature = nextRouteSignature; route.replaceChildren();
       for (const channel of [{ id: 'main', name: '酒馆主 API' }, ...current.settings.channels]) { const option = node('option', channel.name); option.value = channel.id; route.append(option); } route.value = current.settings.routing.default;
+    }
+    const nextSummaryRouteSignature = canonical([current.settings.channels, current.settings.routing.summary ?? null, current.settings.routing.default]);
+    if (summaryRouteSignature !== nextSummaryRouteSignature) {
+      summaryRouteSignature = nextSummaryRouteSignature; summaryRoute.replaceChildren();
+      for (const channel of [{ id: 'main', name: '酒馆主 API' }, ...current.settings.channels]) { const option = node('option', channel.name); option.value = channel.id; summaryRoute.append(option); }
+      summaryRoute.value = current.settings.routing.summary ?? current.settings.routing.default;
     }
     const nextChannelsSignature = canonical(current.settings.channels.map(channel => ({ ...channel, hasCredential: runtime.vault.has(channel.id) })));
     if (channelsSignature !== nextChannelsSignature) {
@@ -217,8 +259,9 @@ export function mountPanel(runtime) {
       }
     }
     taskList.replaceChildren(); if (!current.tasks.length) taskList.append(emptyState('此刻，一切安静', '后台任务出现时，会在这里显示进度。', 'activity'));
-    for (const task of current.tasks.slice(-12)) { const row = node('div', undefined, 'memory-core-task'); row.append(node('strong', moduleNames[task.module] ?? task.module), node('span', taskNames[task.status] ?? task.status, 'memory-core-badge'), node('small', `尝试 ${task.attempt}`)); if (['queued', 'running', 'retrying'].includes(task.status)) action('取消', () => runtime.scheduler.cancel(task.id), row); taskList.append(row); }
+    for (const task of current.tasks.slice(-12)) { const row = node('div', undefined, 'memory-core-task'); row.append(node('strong', moduleNames[task.module] ?? task.module), node('span', taskNames[task.status] ?? task.status, 'memory-core-badge'), node('small', `尝试 ${task.attempt}${task.errorCode ? ` · ${task.errorCode}` : ''}`)); if (['queued', 'running', 'retrying'].includes(task.status)) action('取消', () => runtime.scheduler.cancel(task.id), row); taskList.append(row); }
     logs.textContent = runtime.logger.entries({ level: logFilter.value || undefined }).slice(-30).map(entry => `${new Date(entry.at).toLocaleTimeString()} [${entry.level}] ${entry.code} ${entry.message}`).join('\n') || '暂无日志';
+    workbench.render();
   }
-  const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); }); const dispose = attachShell(shell, () => { clearTimeout(timer); unsubscribe(); }); render(); return dispose;
+  const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); }); let disposeEntries = () => {}; const dispose = attachShell(shell, () => { clearTimeout(timer); unsubscribe(); workbench.dispose(); disposeEntries(); }); disposeEntries = mountExtraEntries(runtime,shell.openButton); render(); return dispose;
 }
