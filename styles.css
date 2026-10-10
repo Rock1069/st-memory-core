@@ -115,6 +115,11 @@
 .memory-core-api-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; align-items: start; }
 .memory-core-form { display: grid; gap: 16px; }
 .memory-core-field { display: grid; gap: 7px; min-width: 0; font-size: 12px; color: #bfcec8; }
+.memory-core-model-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.memory-core-model-row > input { flex: 1; }
+.memory-core-panel .memory-core-fetch-models { flex: 0 0 auto; padding: 10px; font-size: 12px; white-space: nowrap; }
+.memory-core-model-status { margin: -4px 0 0; font-size: 12px; line-height: 1.6; color: var(--mc-muted); overflow-wrap: anywhere; }
+.memory-core-model-status[data-tone=error] { color: var(--mc-danger); }
 .memory-core-panel input:not([type=checkbox]), .memory-core-panel select { display: block; width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 10px 12px; border: 1px solid #d7ece025; border-radius: 8px; background: #101b1d; color: var(--mc-text); font: inherit; font-size: 13px; line-height: 1.5; box-shadow: none; }
 .memory-core-panel input::placeholder { color: #839b92; opacity: 1; }
 .memory-core-channel-list { display: flex; flex-direction: column; gap: 16px; }

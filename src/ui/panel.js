@@ -2,6 +2,7 @@ import { canonical, id } from '../core/util.js';
 import { MODULES } from '../core/settings.js';
 import { mountNavigation } from './navigation.js';
 import { PLUGIN_VERSION } from '../core/version.js';
+import { normalizeApiEndpoint } from '../core/gateway.js';
 import { icon, memoryMap } from './icons.js';
 import { mountWorkbench } from './workbench.js';
 import { mountExtraEntries } from './entries.js';
@@ -174,16 +175,54 @@ export function mountPanel(runtime) {
   action('测试默认渠道', async () => { const result = await runtime.testChannel(); feedback.textContent = `渠道已返回：${runtime.logger.redact(result).slice(0, 120)}`; }, routeTools, { icon: 'activity' }); routeCard.append(node('p', '测试会发送一次“回复 OK”的模型请求。', 'memory-core-muted')); views.api.append(routeCard);
   const apiGrid = node('div', undefined, 'memory-core-api-grid'); views.api.append(apiGrid);
   const formCard = card('连接独立渠道', '支持 OpenAI 兼容服务', 'connection'); const form = node('form', undefined, 'memory-core-form'); const inputs = {};
-  for (const [key, label, type, placeholder] of [['name', '渠道名称', 'text', '例如：故事助手'], ['endpoint', 'API 基础地址（含 /v1 等路径）', 'url', 'https://api.example.com/v1'], ['model', '模型名称', 'text', '填写服务提供的模型名'], ['secret', 'API Key（仅本次会话保存）', 'password', '输入 API Key']]) {
-    const wrapper = node('label', label, 'memory-core-field'); const input = node('input'); input.type = type; input.placeholder = placeholder; input.autocomplete = key === 'secret' ? 'new-password' : 'off'; input.required = key !== 'secret'; wrapper.append(input); form.append(wrapper); inputs[key] = input;
+  const fetchModels = button('获取模型', 'refresh', 'memory-core-fetch-models'); fetchModels.title = '使用当前 API 地址和 Key 获取模型列表';
+  for (const [key, label, type, placeholder] of [['name', '渠道名称', 'text', '例如：故事助手'], ['endpoint', 'API 基础地址（含 /v1 等路径）', 'url', 'https://api.example.com/v1'], ['secret', 'API Key（仅本次会话保存）', 'password', '输入 API Key'], ['model', '模型名称', 'text', '填写模型名，或一键获取']]) {
+    const wrapper = node('div', undefined, 'memory-core-field'); const labelNode = node('label', label); const input = node('input'); input.id = `memory-core-channel-${key}`; labelNode.htmlFor = input.id;
+    input.type = type; input.placeholder = placeholder; input.autocomplete = key === 'secret' ? 'new-password' : 'off'; input.required = key !== 'secret'; wrapper.append(labelNode);
+    if (key === 'model') { const row = node('div', undefined, 'memory-core-model-row'); row.append(input, fetchModels); wrapper.append(row); } else wrapper.append(input);
+    form.append(wrapper); inputs[key] = input;
   }
+  const modelChoices = node('label', '可用模型', 'memory-core-field'); modelChoices.hidden = true;
+  const modelSelect = node('select'); modelSelect.setAttribute('aria-label', '可用模型'); modelChoices.append(modelSelect); form.append(modelChoices);
+  const modelStatus = node('p', '填写 API 地址和 Key 后，点击「获取模型」。也可直接填写模型名。', 'memory-core-model-status');
+  modelStatus.setAttribute('role', 'status'); modelStatus.setAttribute('aria-live', 'polite'); form.append(modelStatus);
+  let modelLookup = null;
+  const cancelModelLookup = () => { modelLookup?.abort(); modelLookup = null; fetchModels.disabled = false; fetchModels.removeAttribute('aria-busy'); fetchModels.querySelector('span').textContent = '获取模型'; };
+  const clearModelChoices = () => { modelChoices.hidden = true; modelSelect.replaceChildren(); };
+  for (const input of [inputs.endpoint, inputs.secret]) input.addEventListener('input', () => {
+    cancelModelLookup(); clearModelChoices(); delete modelStatus.dataset.tone;
+    modelStatus.textContent = '连接信息已更改，点击「获取模型」重新读取列表。';
+  });
+  inputs.model.addEventListener('input', () => { modelSelect.value = inputs.model.value; });
+  modelSelect.addEventListener('change', () => { if (modelSelect.value) inputs.model.value = modelSelect.value; });
+  fetchModels.addEventListener('click', async () => {
+    if (modelLookup) return;
+    const controller = new AbortController(); modelLookup = controller;
+    const endpoint = inputs.endpoint.value; const secret = inputs.secret.value;
+    clearModelChoices(); fetchModels.disabled = true; fetchModels.setAttribute('aria-busy', 'true'); fetchModels.querySelector('span').textContent = '获取中…';
+    delete modelStatus.dataset.tone; modelStatus.textContent = '正在获取模型列表…';
+    try {
+      const models = await runtime.gateway.discoverModels({ endpoint, secret, signal: controller.signal });
+      if (modelLookup !== controller || controller.signal.aborted || endpoint !== inputs.endpoint.value || secret !== inputs.secret.value) return;
+      const placeholder = node('option', '请选择模型'); placeholder.value = ''; modelSelect.append(placeholder);
+      for (const model of models) { const option = node('option', model); option.value = model; modelSelect.append(option); }
+      const autoFill = models.length === 1 && !inputs.model.value.trim();
+      if (autoFill) inputs.model.value = models[0];
+      modelSelect.value = models.includes(inputs.model.value) ? inputs.model.value : ''; modelChoices.hidden = false;
+      modelStatus.textContent = autoFill ? '已获取 1 个模型，已填入模型名称。' : `已获取 ${models.length} 个模型，可从列表选择或继续手动填写。`;
+    } catch (error) {
+      if (modelLookup !== controller || controller.signal.aborted) return;
+      runtime.logger.error(error); modelStatus.dataset.tone = 'error'; modelStatus.textContent = runtime.logger.redact(error.message ?? String(error));
+    } finally { if (modelLookup === controller) cancelModelLookup(); }
+  });
+  form.addEventListener('reset', () => { cancelModelLookup(); clearModelChoices(); delete modelStatus.dataset.tone; modelStatus.textContent = '填写 API 地址和 Key 后，点击「获取模型」。也可直接填写模型名。'; });
   const saveChannel = button('添加渠道', 'connection', 'memory-core-primary'); saveChannel.type = 'submit'; form.append(saveChannel); formCard.append(form); apiGrid.append(formCard);
   form.addEventListener('submit', async event => {
-    event.preventDefault(); saveChannel.disabled = true; delete feedback.dataset.tone;
+    event.preventDefault(); cancelModelLookup(); saveChannel.disabled = true; delete feedback.dataset.tone;
     try {
       const channelId = id('channel'); const config = runtime.settings.snapshot();
-      await runtime.settings.update({ channels: [...config.channels, { id: channelId, name: inputs.name.value.trim(), endpoint: inputs.endpoint.value.trim(), model: inputs.model.value.trim(), timeoutMs: 120000, retries: 2 }] });
-      runtime.vault.set(channelId, inputs.secret.value); form.reset(); feedback.textContent = '渠道已添加，密钥仅在本次会话有效。';
+      await runtime.settings.update({ channels: [...config.channels, { id: channelId, name: inputs.name.value.trim(), endpoint: normalizeApiEndpoint(inputs.endpoint.value), model: inputs.model.value.trim(), timeoutMs: 120000, retries: 2 }] });
+      runtime.vault.set(channelId, inputs.secret.value.trim()); form.reset(); feedback.textContent = '渠道已添加，密钥仅在本次会话有效。';
     } catch (error) { reportError(error); } finally { saveChannel.disabled = false; render(); }
   });
   const channelsCard = card('我的渠道', '独立渠道的密钥在刷新后需重新填写。', 'lock'); const channels = node('div', undefined, 'memory-core-channel-list'); channelsCard.append(channels); apiGrid.append(channelsCard);
@@ -263,5 +302,5 @@ export function mountPanel(runtime) {
     logs.textContent = runtime.logger.entries({ level: logFilter.value || undefined }).slice(-30).map(entry => `${new Date(entry.at).toLocaleTimeString()} [${entry.level}] ${entry.code} ${entry.message}`).join('\n') || '暂无日志';
     workbench.render();
   }
-  const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); }); let disposeEntries = () => {}; const dispose = attachShell(shell, () => { clearTimeout(timer); unsubscribe(); workbench.dispose(); disposeEntries(); }); disposeEntries = mountExtraEntries(runtime,shell.openButton); render(); return dispose;
+  const unsubscribe = runtime.subscribe(() => { clearTimeout(timer); timer = setTimeout(render, 80); }); let disposeEntries = () => {}; const dispose = attachShell(shell, () => { clearTimeout(timer); cancelModelLookup(); unsubscribe(); workbench.dispose(); disposeEntries(); }); disposeEntries = mountExtraEntries(runtime,shell.openButton); render(); return dispose;
 }

@@ -1,5 +1,14 @@
 import { abortError, clone, CoreError, hash, requireThat } from './util.js';
 
+export function normalizeApiEndpoint(endpoint) {
+  let url;
+  try { url = new URL(String(endpoint ?? '').trim()); }
+  catch { throw new CoreError('INVALID_ENDPOINT', '请填写有效的 API 基础地址'); }
+  requireThat(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash, 'INVALID_ENDPOINT', 'API 地址须为 HTTP/HTTPS，且不能包含账号、密码、查询参数或片段');
+  url.pathname = url.pathname.replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
+  return url.toString().replace(/\/$/, '');
+}
+
 export async function readStream(response, signal) {
   requireThat(response.body?.getReader, 'API_CONTRACT', '服务未返回可读取的流');
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let pending = ''; let text = '';
@@ -19,6 +28,55 @@ export async function readStream(response, signal) {
 export class ModelGateway {
   constructor({ host, settings, vault, scheduler, logger, fetchImpl = globalThis.fetch }) {
     Object.assign(this, { host, settings, vault, scheduler, logger, fetchImpl });
+  }
+  async discoverModels({ endpoint, secret = '', signal, timeoutMs = 30000 }) {
+    const base = normalizeApiEndpoint(endpoint);
+    requireThat(typeof secret === 'string', 'INVALID_CREDENTIAL', 'API Key 格式无效');
+    requireThat(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 120000, 'INVALID_TIMEOUT', '获取模型的超时设置无效');
+    const context = this.host.context();
+    requireThat(typeof context?.getRequestHeaders === 'function', 'API_UNAVAILABLE', '酒馆代理接口不可用');
+    abortError(signal);
+    const key = secret.trim(); this.logger.registerSecret(key);
+    const controller = new AbortController();
+    const cancel = () => controller.abort(); signal?.addEventListener('abort', cancel, { once: true });
+    let timedOut = false; let rejectAbort;
+    const aborted = new Promise((_, reject) => { rejectAbort = reject; });
+    const onAbort = () => rejectAbort(new CoreError(timedOut ? 'TIMEOUT' : 'CANCELLED', timedOut ? '获取模型超时，请检查连接后重试' : '获取模型已取消'));
+    controller.signal.addEventListener('abort', onAbort, { once: true });
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
+    try {
+      // Use the host proxy so provider CORS rules do not block model discovery.
+      const query = async () => {
+        let result;
+        try {
+          result = await this.fetchImpl('/api/backends/chat-completions/status', {
+            method: 'POST', headers: context.getRequestHeaders(), signal: controller.signal, cache: 'no-store',
+            body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: key }),
+          });
+        } catch { abortError(controller.signal); throw new CoreError('NETWORK_ERROR', '获取模型连接失败，请检查酒馆连接后重试'); }
+        abortError(controller.signal);
+        if (!result.ok) {
+          const message = [401, 403].includes(result.status) ? '获取模型被拒绝，请检查 API Key 或访问权限' : result.status === 404 ? '模型列表接口不存在，请检查 API 地址或手动填写模型名' : `获取模型失败（HTTP ${result.status}），请检查地址和服务状态`;
+          throw new CoreError('API_REJECTED', message, { status: result.status });
+        }
+        let payload;
+        try { payload = await result.json(); }
+        catch { abortError(controller.signal); throw new CoreError('API_CONTRACT', '模型列表不是有效 JSON，请检查 API 地址或手动填写模型名'); }
+        abortError(controller.signal);
+        requireThat(!payload?.error, 'API_REJECTED', '无法获取模型，请检查 API 地址、Key 及服务是否支持 /models');
+        const rows = Array.isArray(payload) ? payload : payload?.data;
+        requireThat(Array.isArray(rows), 'API_CONTRACT', '服务未返回兼容的模型列表，可以手动填写模型名');
+        const models = [...new Set(rows.map(row => typeof row === 'string' ? row : row?.id).filter(value => typeof value === 'string' && value.trim() && value.length <= 512 && !/[\u0000-\u001f\u007f]/.test(value)).map(value => value.trim()))].sort((a, b) => a.localeCompare(b));
+        requireThat(models.length > 0, 'EMPTY_MODEL_LIST', '服务未返回可用模型，请检查 Key 权限或手动填写模型名');
+        return models;
+      };
+      const models = await Promise.race([query(), aborted]);
+      abortError(controller.signal);
+      this.logger.write('info', 'API_MODELS_LOADED', `已获取 ${models.length} 个模型`, { count: models.length });
+      return models;
+    } finally {
+      clearTimeout(timer); signal?.removeEventListener('abort', cancel); controller.signal.removeEventListener('abort', onAbort);
+    }
   }
   async request({ task = 'diagnostic', module = 'core', key, messages, lease, assertCurrent, maxTokens = 128, channelOverride = null }) {
     messages = clone(messages);
@@ -42,7 +100,7 @@ export class ModelGateway {
           const context = this.host.context();
           requireThat(typeof context?.getRequestHeaders === 'function', 'API_UNAVAILABLE', '酒馆代理接口不可用');
           let result;
-          const body = { chat_completion_source: 'openai', model: channel.model, messages, stream: channel.stream ?? false, max_tokens: Math.min(maxTokens, channel.maxTokens ?? maxTokens), reverse_proxy: channel.endpoint.replace(/\/chat\/completions\/?$/, '').replace(/\/$/, ''), proxy_password: this.vault.get(channelId) };
+          const body = { chat_completion_source: 'openai', model: channel.model, messages, stream: channel.stream ?? false, max_tokens: Math.min(maxTokens, channel.maxTokens ?? maxTokens), reverse_proxy: normalizeApiEndpoint(channel.endpoint), proxy_password: this.vault.get(channelId) };
           if (channel.temperature !== undefined) body.temperature = channel.temperature;
           for (const parameter of channel.omitParameters ?? []) delete body[parameter];
           try {
