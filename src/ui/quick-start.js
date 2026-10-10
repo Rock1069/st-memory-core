@@ -62,8 +62,12 @@ export function mountQuickStart(container, runtime, { onConnect, onView, onAdvan
     const currentProgress = progress.scope === scope;
     delete status.dataset.tone;
     if (!snapshot.active) status.textContent = '打开聊天后，选择 API 并点击「开启自动记忆」。';
-    else if (busy) status.textContent = currentProgress ? `正在整理记忆 · ${progress.completed}/${progress.total} 楼。可点击「停止整理」，已保存的结果会保留。` : '正在结束上一项记忆任务…';
-    else if (currentProgress && progress.status === 'failed') { status.dataset.tone = 'error'; status.textContent = runtime.logger.redact(`整理失败：${progress.error}。可在连接恢复后点击「补齐历史记忆」重试。`); }
+    else if (busy) status.textContent = currentProgress ? `${progress.formatRetry ? '模型输出格式不合格，正在自动重试一次' : '正在整理记忆'} · ${progress.completed}/${progress.total} 楼。可点击「停止整理」，已保存的结果会保留。` : '正在结束上一项记忆任务…';
+    else if (currentProgress && progress.status === 'failed') {
+      status.dataset.tone = 'error';
+      const hint = ['EXTRACTION_JSON', 'EXTRACTION_CONTRACT'].includes(progress.errorCode) ? '已保存的记忆保留。点击「补齐历史记忆」可重试；若反复失败，可在高级设置提高输出上限或更换记忆模型。' : '已保存的记忆保留。处理上述问题后，点击「补齐历史记忆」重试。';
+      status.textContent = runtime.logger.redact(`整理失败：${progress.error}。${hint}`);
+    }
     else if (entities.some(entity => entity.kind === 'draft' && entity.fields.status === 'pending')) status.textContent = '有之前留下的待审阅结果，可在高级设置的「分析与审阅」中确认。';
     else if (!memoryEnabled) status.textContent = '直接跟随酒馆主 API，再点击「开启自动记忆」。';
     else if (!automatic) status.textContent = '自动整理已暂停。点击开启后恢复，已有记忆仍用于回复。';

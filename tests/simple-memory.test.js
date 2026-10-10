@@ -55,7 +55,8 @@ test('start requires an active chat and an available API before changing configu
 
 test('history retry keeps committed floors and only completes the remaining gaps', async t => {
   const f = await fixture({ chat: [{ mes: '一', is_user: false }, { mes: '二', is_user: false }] }); t.after(() => f.runtime.stop());
-  f.setResponse(() => f.calls === 2 ? 'invalid-json' : JSON.stringify({ summary: { text: '有效记忆', visibility: 'public' }, changes: [] }));
+  f.setResponse(() => [2, 3].includes(f.calls) ? 'invalid-json' : JSON.stringify({ summary: { text: '有效记忆', visibility: 'public' }, changes: [] }));
   await assert.rejects(fillMemoryHistory(f.runtime), error => error.code === 'EXTRACTION_JSON'); assert.equal(f.runtime.getSnapshot().coverage.summary.summarized, 1);
-  await fillMemoryHistory(f.runtime); assert.equal(f.runtime.getSnapshot().coverage.summary.summarized, 2); assert.equal(f.calls, 3); assert.equal(f.runtime.settings.snapshot().memory.autoSummarize, false);
+  assert.equal(f.runtime.p1.progress.errorCode, 'EXTRACTION_JSON');
+  await fillMemoryHistory(f.runtime); assert.equal(f.runtime.getSnapshot().coverage.summary.summarized, 2); assert.equal(f.calls, 4); assert.equal(f.runtime.settings.snapshot().memory.autoSummarize, false);
 });

@@ -4,10 +4,10 @@ import { DOMAIN_DEFAULTS, entityOperations, validateReferences } from './domain.
 import { cleanMessageText, summaryCandidates, summaryEntityId } from './memory.js';
 import { composePrompt, compressionFrontier, estimateTokens, nodeSignature, summaryGraph } from './composer.js';
 import { parseStoryTime, validateStoryTime } from './story-time.js';
+import { MEMORY_JSON_INSTRUCTION, parseMemoryJson } from './memory-json.js';
 
 const evidenceOf = sources => sources.map(source => ({ messageId: source.messageId, versionId: source.versionId }));
 const fieldSet = (entityId,key,value) => ({ type: 'set', entityId, path: [key], value });
-function parseJson(response) { try { return clone(JSON.parse(response.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''))); } catch { throw new CoreError('EXTRACTION_JSON', '模型未返回有效记忆 JSON；请检查提取提示词或重试'); } }
 function signature(entity) { return entity ? canonical(entity) : null; }
 function referencedIds(value,key = '') { return Array.isArray(value) ? value.flatMap(v => referencedIds(v,key)) : value && typeof value === 'object' ? Object.entries(value).flatMap(([name,v]) => referencedIds(v,name)) : typeof value === 'string' && /^(entityId|.*Ids?)$/.test(key) ? [value] : []; }
 export class P1Service {
@@ -38,8 +38,8 @@ export class P1Service {
         if (!review && config.hideCovered) await this.hideCovered();
         if (!review && config.autoCompress) { const nodes = compressionFrontier(this.runtime.getSnapshot()); if (nodes.length >= config.compressThreshold) { const draft = await this.compress(nodes.slice(0,config.compressThreshold).map(n => n.id)); await this.accept([draft.id]); } }
         return clone(this.progress);
-      } catch (error) { this.progress.status = error.code === 'CANCELLED' ? 'stopped' : 'failed'; this.progress.error = error.message; throw error; }
-      finally { if (this.batchController === controller) this.batchController = null; this.runtime.notify({ type: 'memory.progress' }); }
+      } catch (error) { this.progress.status = error.code === 'CANCELLED' ? 'stopped' : 'failed'; this.progress.error = error.message; this.progress.errorCode = error.code ?? 'UNEXPECTED'; throw error; }
+      finally { this.progress.formatRetry = false; if (this.batchController === controller) this.batchController = null; this.runtime.notify({ type: 'memory.progress' }); }
     });
   }
   dependencies(ops,snapshot) {
@@ -59,9 +59,26 @@ export class P1Service {
     const previous = snapshot.messages[source.index - 1];
     const contextText = previous?.role === 'user' ? cleanMessageText(r.sourceData().chat[previous.index]?.mes,config.memory.cleanTags) : '';
     const messages = [{ role: 'system', content: `${prompt}\n输出语言：${config.prompt.language}；摘要长度：${config.memory.detail === 'detailed' ? '详细' : '精简'}。字段契约：${pure ? '' : JSON.stringify(DOMAIN_DEFAULTS)}` }, { role: 'user', content: `${pure ? '' : `当前状态（已发生）：${JSON.stringify(state)}\n故事历法：${JSON.stringify(config.story.calendar)}\n设定材料（不是剧情）：${JSON.stringify(this.materials.materials)}\n上条用户输入仅为意图：${contextText}\n`}目标正文第 ${source.index + 1} 楼（${source.role}）：\n${text}` }];
-    const response = await r.gateway.request({ task: pure ? 'summary' : 'extraction', module: 'memory', key: `analysis:${source.messageId}:${source.versionId}`, messages, lease, assertCurrent: () => r.assertLease(lease), maxTokens: config.memory.maxTokens });
-    r.assertLease(lease);
-    const result = pure ? { summary: { text: response.trim(), visibility: 'narrator', audienceIds: [] }, changes: [], storyTime: null } : parseJson(response);
+    if (!pure) messages[0].content += `\n${MEMORY_JSON_INSTRUCTION}`;
+    const batch = this.batchController;
+    const assertCurrent = () => { r.assertLease(lease); requireThat(!batch?.signal.aborted, 'CANCELLED', '记忆整理已停止'); };
+    let result;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      assertCurrent();
+      const requestMessages = clone(messages);
+      if (attempt) requestMessages[0].content += '\n上次输出不符合记忆格式。请重新依据原始正文提取，省略解释并缩短内容，确保 JSON 完整。';
+      const response = await r.gateway.request({ task: pure ? 'summary' : 'extraction', module: 'memory', key: `analysis:${source.messageId}:${source.versionId}:${attempt}`, messages: requestMessages, lease, assertCurrent, maxTokens: config.memory.maxTokens });
+      assertCurrent();
+      try {
+        result = pure ? { summary: { text: response.trim(), visibility: 'narrator', audienceIds: [] }, changes: [], storyTime: null } : parseMemoryJson(response);
+        break;
+      } catch (error) {
+        if (!['EXTRACTION_JSON', 'EXTRACTION_CONTRACT'].includes(error.code)) throw error;
+        if (attempt) throw new CoreError(error.code, `${error.message}；自动重试一次仍未成功`, { formatAttempts: 2 });
+        this.progress.formatRetry = true; r.notify({ type: 'memory.progress' });
+        r.logger.write('warn', 'EXTRACTION_FORMAT_RETRY', '模型记忆格式不合格，正在自动重试一次', { reason: error.code, responseChars: response.length });
+      } finally { if (attempt || result) this.progress.formatRetry = false; }
+    }
     requireThat(result.summary && typeof result.summary.text === 'string' && result.summary.text.trim() && Array.isArray(result.changes ?? []) && (result.changes?.length ?? 0) <= 100, 'EXTRACTION_CONTRACT', '提取结果缺少摘要或变更列表');
     const summary = { visibility: 'narrator', audienceIds: [], ...result.summary };
     requireThat(['public','private','narrator'].includes(summary.visibility) && Array.isArray(summary.audienceIds) && summary.audienceIds.every(x => typeof x === 'string'), 'EXTRACTION_CONTRACT', '摘要可见范围无效');

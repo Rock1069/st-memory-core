@@ -22,8 +22,11 @@ export async function verifySimpleHome({ browser, url, root, check, errors }) {
       f.runtime.gateway.fetchImpl = async (url, options) => {
         if (url.endsWith('/status')) return new Response('{"data":[{"id":"simple-model"}]}');
         quickApiCalls++;
+        if (quickApiCalls === 4) return new Response(JSON.stringify({ choices: [{ message: { content: '第四楼的第一次返回不是 JSON' } }] }));
         const actor = Object.values(f.runtime.getSnapshot().state.entities).find(entity => entity.kind === 'character');
-        return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summary: { text: '自动整理的港口记忆', visibility: 'public' }, changes: [{ kind: 'character', id: actor?.id ?? 'quick-actor', name: '旅人', fields: { current: { presence: 'present' } } }] }) } }] }));
+        const json = JSON.stringify({ summary: { text: '自动整理的港口记忆', visibility: 'public' }, changes: [{ kind: 'character', id: actor?.id ?? 'quick-actor', name: '旅人', fields: { current: { presence: 'present' } } }] });
+        const content = quickApiCalls === 1 ? `<think>{"summary":{"text":"思考中的猜测"},"changes":[]}</think>\n结果如下：\n\`\`\`json\n${json}\n\`\`\`` : quickApiCalls === 2 ? `以下为记忆：${json}\n提取完成。` : json;
+        return new Response(JSON.stringify({ choices: [{ message: { content } }] }));
       };
     });
     await api.getByLabel('API 基础地址（含 /v1 等路径）', { exact: true }).fill('https://simple.example/v1');
@@ -41,6 +44,7 @@ export async function verifySimpleHome({ browser, url, root, check, errors }) {
       const config = f.runtime.settings.snapshot(); const snapshot = f.runtime.getSnapshot();
       return config.enabled && config.modules.memory && config.memory.autoSummarize && !config.memory.requireReview && config.memory.autoCompress && config.prompt.enabled && quickApiCalls === 2 && !Object.values(snapshot.state.entities).some(entity => entity.kind === 'draft' && entity.fields.status === 'pending');
     }));
+    check('独立渠道带思考块和说明的 JSON 可直接保存，思考内容不进入记忆', await page.evaluate(() => quickApiCalls === 2 && f.runtime.getSnapshot().coverage.summary.summarized === 2 && !JSON.stringify(f.runtime.getSnapshot().state.entities).includes('思考中的猜测')));
     await page.waitForFunction(() => document.querySelector('.memory-core-quick-totals strong').textContent === '2');
     check('首页显示已记住楼层、人物和最近记忆', await home.locator('.memory-core-quick-totals strong').nth(1).textContent() === '1' && await home.locator('.memory-core-quick-recent details').count() === 2);
     await page.evaluate(async () => {
@@ -54,7 +58,7 @@ export async function verifySimpleHome({ browser, url, root, check, errors }) {
     check('暂停后停止自动调用但保留已保存记忆', await page.evaluate(() => quickApiCalls === 3 && f.runtime.getSnapshot().coverage.summary.summarized === 3 && f.context.prompt.includes('自动整理的港口记忆')));
     await home.getByRole('button', { name: '补齐历史记忆', exact: true }).click();
     await page.waitForFunction(() => f.runtime.getSnapshot().coverage.summary?.summarized === 4 && f.runtime.p1.progress.status === 'completed');
-    check('历史记忆无需填写楼层范围即可补齐', await page.evaluate(() => quickApiCalls === 4 && !f.runtime.settings.snapshot().memory.autoSummarize));
+    check('历史记忆无需填写楼层范围即可补齐，坏格式自动重试一次', await page.evaluate(() => quickApiCalls === 5 && !f.runtime.settings.snapshot().memory.autoSummarize && f.runtime.logger.entries().some(entry => entry.code === 'EXTRACTION_FORMAT_RETRY')));
     await home.getByRole('button', { name: '查看记忆', exact: true }).click();
     check('查看记忆直接进入人物记录且默认收起技术字段', await workbench.getByLabel('人物 · 旅人', { exact: true }).isVisible() && !(await workbench.getByLabel('记录 ID（新建留空）').isVisible()) && await workbench.getByRole('button', { name: '分析与审阅', exact: true }).count() === 0);
     await page.getByRole('tab', { name: '记忆首页', exact: true }).click();
@@ -73,13 +77,17 @@ export async function verifySimpleHome({ browser, url, root, check, errors }) {
     }
     await page.evaluate(async () => {
       f.context.chat.push({ mes: '第五楼待补齐。', is_user: false }); await f.runtime.sync();
-      f.runtime.gateway.fetchImpl = async () => new Response('{"error":true}');
+      window.formatCalls = 0;
+      f.runtime.gateway.fetchImpl = async () => { formatCalls++; return new Response(JSON.stringify({ choices: [{ message: { content: '格式错误' } }] })); };
     });
     await home.getByRole('button', { name: '补齐历史记忆', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.memory-core-quick-status').dataset.tone === 'error');
     check('整理失败在首页显示原因并保留已有记忆', await page.evaluate(() => f.runtime.getSnapshot().coverage.summary.summarized === 4) && (await home.locator('.memory-core-quick-status').textContent()).includes('整理失败'));
-    await page.evaluate(() => { f.runtime.gateway.fetchImpl = async () => new Promise(resolve => { window.finishSimple = resolve; }); });
+    check('重复格式错误最多重试一次且提示不再误报连接恢复', await page.evaluate(() => formatCalls === 2 && f.runtime.p1.progress.errorCode === 'EXTRACTION_JSON') && !(await home.locator('.memory-core-quick-status').textContent()).includes('连接恢复'));
+    await page.evaluate(() => { window.formatCalls = 0; f.runtime.gateway.fetchImpl = async () => { formatCalls++; return formatCalls === 1 ? new Response(JSON.stringify({ choices: [{ message: { content: '格式错误' } }] })) : new Promise(resolve => { window.finishSimple = resolve; }); }; });
     await home.getByRole('button', { name: '补齐历史记忆', exact: true }).click({ noWaitAfter: true }); await page.waitForFunction(() => typeof window.finishSimple === 'function');
+    await page.waitForFunction(() => document.querySelector('.memory-core-quick-status').textContent.includes('正在自动重试一次'));
+    check('首页显示格式自动重试状态且可停止', (await home.locator('.memory-core-quick-status').textContent()).includes('正在自动重试一次') && await home.getByRole('button', { name: '停止整理', exact: true }).isVisible());
     await home.getByRole('button', { name: '停止整理', exact: true }).click();
     await page.evaluate(() => finishSimple(new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ summary: { text: '停止后的迟到内容', visibility: 'public' }, changes: [] }) } }] }))));
     await page.waitForFunction(() => f.runtime.p1.progress.status === 'stopped');

@@ -95,13 +95,18 @@ export class ModelGateway {
         guard(); this.logger.write('info', 'API_STARTED', `${task} 调用 ${channel.name}`, { channelId, task, messages });
         let response;
         if (channelId === 'main') {
-          response = await this.host.context().generateRaw({ prompt: messages, responseLength: maxTokens });
+          // Memory extraction uses a complete final user turn, never an assistant prefill.
+          response = await this.host.context().generateRaw({ prompt: messages, responseLength: maxTokens, prefill: '' });
         } else {
           const context = this.host.context();
           requireThat(typeof context?.getRequestHeaders === 'function', 'API_UNAVAILABLE', '酒馆代理接口不可用');
           let result;
           const body = { chat_completion_source: 'openai', model: channel.model, messages, stream: channel.stream ?? false, max_tokens: Math.min(maxTokens, channel.maxTokens ?? maxTokens), reverse_proxy: normalizeApiEndpoint(channel.endpoint), proxy_password: this.vault.get(channelId) };
           if (channel.temperature !== undefined) body.temperature = channel.temperature;
+          if (/(?:^|[/:])gemini-3\.8-flash(?:$|[-:@])/i.test(channel.model) && Object.hasOwn(body, 'temperature')) {
+            delete body.temperature;
+            this.logger.write('info', 'API_PARAMETERS_ADAPTED', 'Gemini 3.8 Flash 请求已按模型要求省略温度参数', { channelId, model: channel.model });
+          }
           for (const parameter of channel.omitParameters ?? []) delete body[parameter];
           try {
             result = await this.fetchImpl('/api/backends/chat-completions/generate', {

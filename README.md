@@ -1,6 +1,6 @@
 # 记忆中枢
 
-版本 `0.2.2`。SillyTavern 记忆管理扩展。默认使用简洁首页：选 API、开启记忆，然后继续聊天。P0/P1 已实现并通过模拟测试，真实酒馆与真实模型验收待执行。
+版本 `0.2.3`。SillyTavern 记忆管理扩展。默认使用简洁首页：选 API、开启记忆，然后继续聊天。P0/P1 已实现并通过模拟测试，真实酒馆与真实模型验收待执行。
 
 ## 最简单的用法
 
@@ -20,13 +20,17 @@
 
 ## 安装与使用
 
-1. 解压 `artifacts/st-memory-core-p1-0.2.2.zip`，将 `manifest.json`、`index.js`、`styles.css` 和 `src` 一起放入 `st-memory-core` 文件夹。源码也可直接安装，不需要构建。
+1. 解压 `artifacts/st-memory-core-p1-0.2.3.zip`，将 `manifest.json`、`index.js`、`styles.css` 和 `src` 一起放入 `st-memory-core` 文件夹。源码也可直接安装，不需要构建。
 2. 将整个文件夹放入酒馆当前用户的 `extensions` 目录。默认用户通常为 `SillyTavern/data/default-user/extensions/st-memory-core`；自定义数据目录或其他用户使用对应目录。
 3. 刷新酒馆，点击左下角「魔法棒」→「记忆中枢」，直接打开面板弹窗。也可在顶部积木图标的扩展设置中展开「记忆中枢」，点击「打开面板」。如果宿主没有常用设置容器，设置入口会显示在右下角。
 4. 打开一个聊天，按上面的三步使用。检查点、备份、任务日志在进阶/完整界面中保留。
 5. 独立 API 支持 OpenAI Chat Completions 兼容服务。只有一个模型且名称为空时自动填入；多个模型从「可用模型」下拉列表选择。也可手动填写模型名。
 
-从 0.1.x/0.2.x 升级：覆盖原来的扩展运行文件，再刷新页面；电脑上可用 `Ctrl+F5` 强制刷新。确认 manifest 和面板版本为 0.2.2。首次升级到这个首页会切换为简洁模式，已有事实库、渠道与其他偏好保留；之后选择进阶/完整模式会正常保存。事实库与配置 schema 保持版本 1。
+从 0.1.x/0.2.x 升级：覆盖原来的扩展运行文件，再刷新页面；电脑上可用 `Ctrl+F5` 强制刷新。确认 manifest 和面板版本为 0.2.3。首次升级到这个首页会切换为简洁模式，已有事实库、渠道与其他偏好保留；之后选择进阶/完整模式会正常保存。事实库与配置 schema 保持版本 1。独立渠道 Key 仅保存在当前会话，刷新后需重新填写。
+
+0.2.3 修复记忆 JSON 格式识别：兼容代码块、前后说明及 `think` 等思考标签；格式不合格时，依据原始正文自动重试一次，保持已设置的输出上限。截断、歧义及格式仍不合格的输出不会保存，已完成楼层保留。升级后点击「补齐历史记忆」即可重试缺口；若反复提示输出不完整，再在高级设置提高任务和渠道输出上限。
+
+记忆请求统一使用无预填充方式，最后一条为非空用户消息，Gemini 3.1 Pro 和 3.8 Flash 无需分别设置预填充开关。主 API 显式传入空 `prefill`；独立渠道直接发送完整消息。独立渠道识别标准 `gemini-3.8-flash` 模型名（含供应商前缀或版本后缀）后，自动省略温度参数。依据：[酒馆原始生成接口](https://raw.githubusercontent.com/SillyTavern/SillyTavern/release/public/script.js)、[Gemini 3.8 Flash 迁移要求](https://ai.google.dev/gemini-api/docs/generate-content/latest-model)。主 API 的模型和采样由酒馆控制，独立渠道仍要求 OpenAI 兼容地址。
 
 「获取模型」支持 OpenAI 兼容的 `/models` 列表，只请求列表，不发送聊天正文。API 基础地址需包含服务要求的 `/v1` 等路径；粘贴 `/chat/completions` 或 `/models` 完整路径时会统一还原为基础地址。获取最多等待 30 秒，失败、空列表或不兼容时显示提示并保留已有模型名称；修改地址或 Key 会取消旧请求，避免迟到列表覆盖新连接。Key 可留空以连接无需认证的本地服务。实现使用 [酒馆模型列表代理接口](https://raw.githubusercontent.com/SillyTavern/SillyTavern/release/src/endpoints/backends/chat-completions.js)。
 
@@ -36,7 +40,7 @@
 
 安装后自动分析默认关闭；点击首页「开启自动记忆」时一次开启故事记忆、自动分析、直接保存、自动压缩和回复注入。历史补齐每次最多处理 1000 楼，超出后首页提示剩余数量，可再次继续。楼数/token 阈值、每批上限、隐藏/注入的近期窗口、纯摘要、提取字段、用户行动来源和清洗/排除标签均可在高级设置调整。规划/Agent 的渠道仅提前配置，不启动尚未实现的模块。
 
-界面使用局部样式和内置 SVG，无需下载字体或图片。窄面板采用单列卡片，按钮保留 44px 触控高度，关闭按钮固定在弹窗顶部。本版本 62 项模拟宿主浏览器检查通过，包含简洁首页、自动保存/注入、模型获取、320px/390px 页面布局和窄屏停止任务；手机实机检查尚未执行。
+界面使用局部样式和内置 SVG，无需下载字体或图片。窄面板采用单列卡片，按钮保留 44px 触控高度，关闭按钮固定在弹窗顶部。本版本 65 项模拟宿主浏览器检查通过，包含简洁首页、自动保存/注入、模型获取、格式兼容与自动重试提示、320px/390px 页面布局和窄屏停止任务；手机实机检查尚未执行。
 
 菜单弹窗可点击「关闭」、点击遮罩或按 Escape 收起。面板内尚未提交的表单输入在关闭、重开后保留。菜单延迟创建或被宿主重建时会重新挂载入口；禁用插件会移除入口和弹窗。
 
@@ -78,7 +82,7 @@ npm run test:ui
 npm run package
 ```
 
-`check` 执行 41 项测试以及语法/引用/版本检查，输出 `artifacts/p1-validation.json` 和 TAP。`test:ui` 需要 Playwright；自动使用 Codex 的 bundled Node 包与已有 Edge/Chromium，可通过 `CODEX_NODE_MODULES` 和 `P1_BROWSER` 指定路径。`package` 使用 Node 内置压缩库生成标准 UTF-8 ZIP 和 SHA-256，无额外打包依赖。
+`check` 执行 55 项测试以及语法/引用/版本检查，输出 `artifacts/p1-validation.json` 和 TAP。包含 11 项记忆 JSON/格式恢复测试和 3 项 Gemini 请求兼容测试。`test:ui` 需要 Playwright；自动使用 Codex 的 bundled Node 包与已有 Edge/Chromium，可通过 `CODEX_NODE_MODULES` 和 `P1_BROWSER` 指定路径。`package` 使用 Node 内置压缩库生成标准 UTF-8 ZIP 和 SHA-256，无额外打包依赖。
 
 以上结果为当前源码的模拟宿主测试，不调用真实模型。真实酒馆版本、API 服务、群聊和手机实机仍需执行文档中的验收步骤；清单保留 `pending_acceptance`。
 
